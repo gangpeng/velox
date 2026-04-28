@@ -1,5 +1,5 @@
+%option nounistd
 %{
-#include <vector>
 #include <memory>
 #include <map>
 

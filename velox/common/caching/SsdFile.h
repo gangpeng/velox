@@ -44,7 +44,7 @@ class SsdRun {
 
   SsdRun(uint64_t offset, uint32_t size, uint32_t checksum)
       : fileBits_((offset << kSizeBits) | (size - 1)), checksum_(checksum) {
-    VELOX_CHECK_LT(offset, 1L << (64 - kSizeBits));
+    VELOX_CHECK_LT(offset, 1LL << (64 - kSizeBits));
     VELOX_CHECK_NE(size, 0);
     VELOX_CHECK_LE(size, 1 << kSizeBits);
   }

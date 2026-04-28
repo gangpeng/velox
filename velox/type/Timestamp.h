@@ -171,7 +171,7 @@ struct Timestamp {
           seconds_,
           nanos_);
     }
-    return result;
+    return static_cast<int64_t>(result);
   }
 
   // Keep it in header for getting inlined.
@@ -198,7 +198,7 @@ struct Timestamp {
           seconds_,
           nanos_);
     }
-    return result;
+    return static_cast<int64_t>(result);
   }
 
   Timestamp toPrecision(const TimestampPrecision& precision) const {

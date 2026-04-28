@@ -26,7 +26,7 @@ namespace facebook::velox {
 
 class StringIdMap {
  public:
-  static constexpr uint64_t kNoId = ~0UL;
+  static constexpr uint64_t kNoId = ~0ULL;
 
   StringIdMap() = default;
 

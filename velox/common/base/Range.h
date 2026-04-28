@@ -90,15 +90,15 @@ class WritablePosition {
 
 template <>
 inline WritablePosition<bool>::operator bool() const {
-  return *bitsPointer() & (1L << bitPosition());
+  return *bitsPointer() & (1LL << bitPosition());
 }
 
 template <>
 inline bool WritablePosition<bool>::operator=(bool value) const {
   if (value) {
-    *bitsPointer() |= 1L << bitPosition();
+    *bitsPointer() |= 1LL << bitPosition();
   } else {
-    *bitsPointer() &= ~(1L << bitPosition());
+    *bitsPointer() &= ~(1LL << bitPosition());
   }
   return value;
 }

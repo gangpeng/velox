@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
       benchmarkBuilder
           .addBenchmarkSet(
               fmt::format(
-                  "hash#{}#{}\%nulls", inputType->toString(), nullRatio * 100),
+                  "hash#{}#{}%nulls", inputType->toString(), nullRatio * 100),
               ROW({"c0"}, {inputType}))
           .withFuzzerOptions({.vectorSize = 4096, .nullRatio = nullRatio})
           .addExpression("hash", "hash(c0)")

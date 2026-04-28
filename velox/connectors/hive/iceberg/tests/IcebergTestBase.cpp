@@ -16,6 +16,7 @@
 
 #include "velox/connectors/hive/iceberg/tests/IcebergTestBase.h"
 
+#include <algorithm>
 #include <filesystem>
 
 #include "velox/connectors/hive/TableHandle.h"
@@ -87,7 +88,7 @@ void IcebergTestBase::setupMemoryPools() {
   queryCtx_.reset();
 
   root_ = memory::memoryManager()->addRootPool(
-      "IcebergTest", 1L << 30, exec::MemoryReclaimer::create());
+      "IcebergTest", 1LL << 30, exec::MemoryReclaimer::create());
   opPool_ = root_->addLeafChild("operator");
   connectorPool_ =
       root_->addAggregateChild("connector", exec::MemoryReclaimer::create());
@@ -259,7 +260,9 @@ std::vector<std::string> IcebergTestBase::listFiles(
   for (auto& dirEntry :
        std::filesystem::recursive_directory_iterator(dirPath)) {
     if (dirEntry.is_regular_file()) {
-      files.push_back(dirEntry.path().string());
+      auto path = dirEntry.path().string();
+      std::replace(path.begin(), path.end(), '\\', '/');
+      files.push_back(std::move(path));
     }
   }
   return files;
@@ -269,8 +272,10 @@ std::unordered_map<std::string, std::optional<std::string>>
 IcebergTestBase::extractPartitionKeys(const std::string& filePath) {
   std::unordered_map<std::string, std::optional<std::string>> partitionKeys;
 
+  auto normalizedPath = filePath;
+  std::replace(normalizedPath.begin(), normalizedPath.end(), '\\', '/');
   std::vector<std::string> pathComponents;
-  folly::split("/", filePath, pathComponents);
+  folly::split("/", normalizedPath, pathComponents);
   for (const auto& component : pathComponents) {
     if (component.find('=') != std::string::npos) {
       std::vector<std::string> keys;

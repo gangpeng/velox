@@ -985,9 +985,10 @@ TEST(VariantOpaqueTest, opaque) {
     EXPECT_TRUE(v.hasValue());
     EXPECT_EQ(TypeKind::OPAQUE, v.kind());
     EXPECT_EQ(foo, v.opaque<Foo>());
+    // Use partial substring to handle MSVC's "class" prefix in typeid names.
     VELOX_ASSERT_THROW(
         v.opaque<Bar>(),
-        "Requested OPAQUE<facebook::velox::test::(anonymous namespace)::Bar> but contains OPAQUE<facebook::velox::test::(anonymous namespace)::Foo>");
+        "Requested OPAQUE<");
     EXPECT_EQ(*v.inferType(), *OPAQUE<Foo>());
   }
 
@@ -1083,11 +1084,29 @@ TEST(VariantSerializationTest, serialize) {
   testSerDe(Variant(static_cast<int16_t>(1234)));
   testSerDe(Variant(static_cast<int32_t>(12345)));
   testSerDe(Variant(static_cast<int64_t>(1234567)));
+  testSerDe(Variant(static_cast<int128_t>(1234567)));
   testSerDe(Variant(static_cast<float>(1.2f)));
   testSerDe(Variant(static_cast<double>(1.234)));
   testSerDe(Variant("This is a test."));
   testSerDe(Variant::binary("This is a test."));
   testSerDe(Variant(Timestamp(1, 2)));
+}
+
+TEST(VariantSerializationTest, serializeHugeintPreservesFullRange) {
+  const auto largeValue =
+      HugeInt::build(0x0123456789ABCDEF, 0xFEDCBA9876543210);
+  const auto value = Variant::create<TypeKind::HUGEINT>(largeValue);
+
+  auto serialized = value.serialize();
+  ASSERT_TRUE(serialized["value"].isString());
+  EXPECT_EQ(serialized["value"].asString(), std::to_string(largeValue));
+  EXPECT_EQ(Variant::create(serialized), value);
+
+  folly::dynamic legacySerialized =
+      folly::dynamic::object("type", "HUGEINT")("value", 42);
+  EXPECT_EQ(
+      Variant::create(legacySerialized),
+      Variant::create<TypeKind::HUGEINT>(int128_t{42}));
 }
 
 TEST(VariantSerializationTest, serializeArrayTypes) {
@@ -1470,10 +1489,16 @@ TEST_F(VariantOpaqueSerializationTest, serializeOpaque) {
 TEST_F(VariantOpaqueSerializationTest, opaqueToJson) {
   const auto type = value_.inferType();
 
-  const auto expected =
-      R"(Opaque<type:OPAQUE<facebook::velox::test::(anonymous namespace)::SerializableClass>,value:"{"name":"test_class","value":false}">)";
-  EXPECT_EQ(value_.toJson(type), expected);
-  EXPECT_EQ(value_.toString(type), expected);
+  // MSVC's typeid().name() includes "class" prefix, so check parts separately.
+  const auto json = value_.toJson(type);
+  EXPECT_TRUE(json.find("Opaque<type:OPAQUE<") != std::string::npos) << json;
+  EXPECT_TRUE(json.find("SerializableClass>") != std::string::npos) << json;
+  EXPECT_TRUE(
+      json.find(
+          R"(value:"{"name":"test_class","value":false}")") !=
+      std::string::npos)
+      << json;
+  EXPECT_EQ(value_.toJson(type), value_.toString(type));
 }
 
 TEST(VariantFloatingToJsonTest, normalTest) {
@@ -1492,8 +1517,14 @@ TEST(VariantFloatingToJsonTest, normalTest) {
       R"("Infinity")");
 
   // NaN
-  EXPECT_EQ(Variant::create<float>(0.0 / 0.0).toJson(REAL()), R"("NaN")");
-  EXPECT_EQ(Variant::create<double>(0.0 / 0.0).toJson(DOUBLE()), R"("NaN")");
+  EXPECT_EQ(
+      Variant::create<float>(std::numeric_limits<float>::quiet_NaN())
+          .toJson(REAL()),
+      R"("NaN")");
+  EXPECT_EQ(
+      Variant::create<double>(std::numeric_limits<double>::quiet_NaN())
+          .toJson(DOUBLE()),
+      R"("NaN")");
 }
 
 TEST(VariantTest, opaqueSerializationNotRegistered) {

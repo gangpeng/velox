@@ -57,7 +57,7 @@ FOLLY_ALWAYS_INLINE void writeHex(char16_t value, char*& out) {
 }
 
 std::array<int8_t, 128> getAsciiEscapes() {
-  std::array<int8_t, 128> escapes;
+  std::array<int8_t, 128> escapes{};
   std::fill(escapes.data(), escapes.data() + 32, -1);
   escapes['"'] = '"';
   escapes['\\'] = '\\';

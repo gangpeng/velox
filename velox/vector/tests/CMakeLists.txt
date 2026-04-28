@@ -69,7 +69,7 @@ target_link_libraries(
   Folly::folly
   glog::glog
   fmt::fmt
-  dl
+  $<$<NOT:$<BOOL:${WIN32}>>:dl>
 )
 
 add_executable(simple_vector_test SimpleVectorTest.cpp ToStringUtilityTest.cpp)

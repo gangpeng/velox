@@ -25,6 +25,7 @@
 #include <folly/Likely.h>
 #include <algorithm>
 
+#include "velox/common/base/Portability.h"
 #include "velox/common/encode/ByteStream.h"
 #include "velox/common/encode/UInt128.h"
 
@@ -266,6 +267,23 @@ class Varint {
   }
 };
 
+#ifdef _MSC_VER
+// On MSVC, absl::uint128 / absl::int128 are not standard integer types so
+// std::make_signed<uint128_t> is undefined. We provide a helper trait that
+// maps __uint128_t -> __int128_t and falls back to std::make_signed for all
+// other types.
+namespace detail {
+template <typename U>
+struct zigzag_signed {
+  using type = typename std::make_signed<U>::type;
+};
+template <>
+struct zigzag_signed<__uint128_t> {
+  using type = __int128_t;
+};
+} // namespace detail
+#endif
+
 // Zig-zag encoding that maps signed integers with a small absolute value
 // to unsigned integers with a small (positive) value.
 // if x >= 0, ZigZag::encode(x) == 2*x
@@ -282,10 +300,24 @@ class ZigZag {
     return (static_cast<__uint128_t>(val) << 1) ^ (val >> 127);
   }
 
+#ifdef _MSC_VER
+  template <typename U, typename T = typename detail::zigzag_signed<U>::type>
+  static T decode(U val) {
+    if constexpr (std::is_same_v<U, __uint128_t>) {
+      // ZigZag decode for 128-bit: -(val & 1) as an all-ones or all-zeros mask.
+      const __uint128_t low = val & __uint128_t{1};
+      const __uint128_t mask = low ? ~__uint128_t{0} : __uint128_t{0};
+      return static_cast<__int128_t>((val >> 1) ^ mask);
+    } else {
+      return static_cast<T>((val >> 1) ^ -(val & 1));
+    }
+  }
+#else
   template <typename U, typename T = typename std::make_signed<U>::type>
   static T decode(U val) {
     return static_cast<T>((val >> 1) ^ -(val & 1));
   }
+#endif
 };
 
 namespace detail {

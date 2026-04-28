@@ -562,9 +562,15 @@ TEST_P(MultiFragmentTest, abortMergeExchange) {
   mergeTask->start(1);
   addRemoteSplits(mergeTask, partialSortTaskIds);
 
+  // Request abort on all fragments before waiting. On slower platforms a
+  // producer can take longer to acknowledge abort; aborting the merge consumer
+  // up front prevents it from being left blocked on a producer if a wait times
+  // out.
   for (auto& task : tasks) {
     task->requestAbort();
-    ASSERT_TRUE(waitForTaskAborted(task.get())) << task->taskId();
+  }
+  for (auto& task : tasks) {
+    ASSERT_TRUE(waitForTaskAborted(task.get(), 30'000'000)) << task->taskId();
   }
 
   // Ensure that the threads in the executor can gracefully join

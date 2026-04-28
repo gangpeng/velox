@@ -390,7 +390,7 @@ TEST_F(BitwiseTest, shiftLeft) {
   EXPECT_EQ(evalFunc(1, 5, 64), 32);
   EXPECT_EQ(evalFunc(32, 60, 64), 0);
   EXPECT_EQ(evalFunc(48, 60, 64), 0);
-  EXPECT_EQ(evalFunc(56, 60, 64), 1L << 63);
+  EXPECT_EQ(evalFunc(56, 60, 64), 1LL << 63);
   EXPECT_EQ(evalFunc(-1, 1, 64), -2); // -1 << 1
   EXPECT_EQ(evalFunc(-1, 32, 64), -4294967296); // -1 << 32
   EXPECT_EQ(evalFunc(-1, 1, 2), 2);

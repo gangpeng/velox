@@ -21,6 +21,18 @@
 
 namespace facebook::velox::functions::sparksql {
 namespace {
+
+// Convert a kPowersOfTen entry (int128_t) to the target type T.
+template <typename T>
+inline T powerOfTenAs(int128_t p) {
+  return static_cast<T>(int128ToInt256(p));
+}
+
+template <>
+inline int128_t powerOfTenAs<int128_t>(int128_t p) {
+  return p;
+}
+
 // Rescale two inputs as the same scale and compare. Returns 0 when a is equal
 // with b. Returns -1 when a is less than b. Returns 1 when a is greater than b.
 template <typename T>
@@ -28,9 +40,9 @@ int32_t rescaleAndCompare(T a, T b, int32_t deltaScale) {
   T aScaled = a;
   T bScaled = b;
   if (deltaScale < 0) {
-    aScaled = a * velox::DecimalUtil::kPowersOfTen[-deltaScale];
+    aScaled = a * powerOfTenAs<T>(velox::DecimalUtil::kPowersOfTen[-deltaScale]);
   } else if (deltaScale > 0) {
-    bScaled = b * velox::DecimalUtil::kPowersOfTen[deltaScale];
+    bScaled = b * powerOfTenAs<T>(velox::DecimalUtil::kPowersOfTen[deltaScale]);
   }
   if (aScaled == bScaled) {
     return 0;
@@ -46,7 +58,7 @@ int32_t
 decimalCompare(int128_t a, int128_t b, int8_t deltaScale, bool need256) {
   if (need256) {
     return rescaleAndCompare<int256_t>(
-        static_cast<int256_t>(a), static_cast<int256_t>(b), deltaScale);
+        int128ToInt256(a), int128ToInt256(b), deltaScale);
   }
   return rescaleAndCompare<int128_t>(a, b, deltaScale);
 }

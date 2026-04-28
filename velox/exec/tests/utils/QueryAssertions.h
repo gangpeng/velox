@@ -25,7 +25,7 @@
 #ifdef BLOCK_SIZE
 #undef BLOCK_SIZE
 #endif
-#include <duckdb.hpp> // @manual
+#include "velox/duckdb/conversion/DuckDBIncludes.h"
 
 namespace facebook::velox::exec::test {
 

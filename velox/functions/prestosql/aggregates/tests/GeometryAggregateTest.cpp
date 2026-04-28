@@ -17,6 +17,7 @@
 #include "velox/common/base/tests/GTestUtils.h"
 #include "velox/exec/tests/utils/PlanBuilder.h"
 #include "velox/functions/lib/aggregates/tests/utils/AggregationTestBase.h"
+#include "velox/functions/prestosql/aggregates/GeometryAggregate.h"
 
 using namespace facebook::velox::exec;
 using namespace facebook::velox::functions::aggregate::test;
@@ -27,6 +28,14 @@ namespace {
 
 class GeometryAggregateTest : public AggregationTestBase {
  protected:
+  static void SetUpTestCase() {
+    AggregationTestBase::SetUpTestCase();
+    // Explicitly register geometry aggregates in case the linker drops the
+    // static initializer (MSVC /OPT:REF).
+    aggregate::prestosql::registerGeometryAggregate(
+        {"convex_hull_agg"}, {"geometry_union_agg"}, true);
+  }
+
   void SetUp() override {
     AggregationTestBase::SetUp();
   }

@@ -352,10 +352,13 @@ void QueryBenchmarkBase::runCombinations(int32_t level) {
     std::stringstream result;
     uint64_t micros = 0;
     {
+#ifndef _WIN32
       struct rusage start;
       getrusage(RUSAGE_SELF, &start);
+#endif
       MicrosecondTimer timer(&micros);
       runMain(result, stats);
+#ifndef _WIN32
       struct rusage final;
       getrusage(RUSAGE_SELF, &final);
       auto tvNanos = [](struct timeval tv) {
@@ -365,6 +368,7 @@ void QueryBenchmarkBase::runCombinations(int32_t level) {
         stats.userNanos = tvNanos(final.ru_utime) - tvNanos(start.ru_utime);
         stats.systemNanos = tvNanos(final.ru_stime) - tvNanos(start.ru_stime);
       }
+#endif
     }
     if (!stats.micros) {
       stats.micros = micros;
@@ -401,10 +405,13 @@ void QueryBenchmarkBase::runOne(std::ostream& out, RunStats& stats) {
   std::stringstream result;
   uint64_t micros = 0;
   {
+#ifndef _WIN32
     struct rusage start;
     getrusage(RUSAGE_SELF, &start);
+#endif
     MicrosecondTimer timer(&micros);
     runMain(out, stats);
+#ifndef _WIN32
     struct rusage final;
     getrusage(RUSAGE_SELF, &final);
     auto tvNanos = [](struct timeval tv) {
@@ -412,6 +419,7 @@ void QueryBenchmarkBase::runOne(std::ostream& out, RunStats& stats) {
     };
     stats.userNanos = tvNanos(final.ru_utime) - tvNanos(start.ru_utime);
     stats.systemNanos = tvNanos(final.ru_stime) - tvNanos(start.ru_stime);
+#endif
   }
   stats.micros = micros;
   stats.output = result.str();

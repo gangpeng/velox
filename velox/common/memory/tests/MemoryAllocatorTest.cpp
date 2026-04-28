@@ -21,6 +21,7 @@
 #include "velox/common/memory/MmapAllocator.h"
 #include "velox/common/memory/MmapArena.h"
 #include "velox/common/memory/SharedArbitrator.h"
+#include "velox/common/memory/SystemMemory.h"
 #include "velox/common/testutil/TestValue.h"
 
 #include <fmt/format.h>
@@ -29,10 +30,6 @@
 #include <gflags/gflags.h>
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
-
-#ifdef linux
-#include <fstream>
-#endif // linux
 
 DECLARE_bool(velox_memory_leak_check_enabled);
 
@@ -133,28 +130,19 @@ class MemoryAllocatorTest : public testing::TestWithParam<int> {
     return true;
   }
 
-  /// Returns the virtual and resident sizes of the process in 4K pages. Only
-  /// defined for Linux.
+  /// Returns process virtual and resident/committed sizes in 4K pages. Windows
+  /// reports committed pages as the resident counterpart so the test can still
+  /// verify reserve-vs-commit behavior.
   std::optional<ProcessSize> processSize() {
-#ifdef linux
-    auto pid = getpid();
-    system(
-        fmt::format("ps -eo 'pid,vsize,rss' |grep \"${}\" >/tmp/{}", pid, pid)
-            .c_str());
-    std::ifstream in(fmt::format("/tmp/{}", pid));
-    std::string line;
-    std::getline(in, line);
-    int32_t resultPid;
-    int32_t vsize;
-    int32_t rss;
-    if (sscanf(line.c_str(), "%d %d %d", &resultPid, &vsize, &rss) != 3) {
+    auto usage = systemProcessMemoryUsage();
+    if (!usage.has_value()) {
       return std::nullopt;
     }
-    constexpr int64_t kKBInPage = AllocationTraits::kPageSize / 1024;
-    return ProcessSize{vsize / kKBInPage, rss / kKBInPage};
-#else
-    return std::nullopt;
-#endif
+    return ProcessSize{
+        static_cast<int64_t>(
+            usage->virtualBytes / AllocationTraits::kPageSize),
+        static_cast<int64_t>(
+            usage->residentBytes / AllocationTraits::kPageSize)};
   }
 
   void checkProcessSize(std::optional<ProcessSize> base, ProcessSize delta) {
@@ -1155,7 +1143,7 @@ TEST_P(MemoryAllocatorTest, allocContiguousGrow) {
   freeSmall(kCapacityPages);
 }
 
-TEST_P(MemoryAllocatorTest, DISABLED_allocContiguousVsize) {
+TEST_P(MemoryAllocatorTest, allocContiguousVsize) {
   // Works with malloc and mmap allocators where MmapArena is not on.
   auto initialSize = processSize();
 
@@ -1382,7 +1370,12 @@ TEST_P(MemoryAllocatorTest, StlMemoryAllocator) {
       ASSERT_EQ(i, data[i]);
     }
     if (useMmap_) {
-      EXPECT_EQ(512, instance_->numAllocated());
+      // std::vector growth factors differ between standard-library
+      // implementations, so derive the allocator expectation from the actual
+      // retained capacity instead of assuming libstdc++'s final capacity.
+      EXPECT_EQ(
+          AllocationTraits::numPages(data.capacity() * sizeof(double)),
+          instance_->numAllocated());
     } else {
       EXPECT_EQ(0, instance_->numAllocated());
     }

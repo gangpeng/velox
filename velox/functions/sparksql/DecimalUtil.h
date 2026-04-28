@@ -16,13 +16,59 @@
 
 #pragma once
 
+#ifdef _MSC_VER
+// MSVC does not support template string literal operators (char... STR),
+// which are used in boost/multiprecision/cpp_int/literals.hpp. Skip that
+// header by defining its include guard before including cpp_int.hpp.
+#define BOOST_MP_CPP_INT_LITERALS_HPP
+#endif
 #include <boost/multiprecision/cpp_int.hpp>
 
 #include "velox/type/DecimalUtil.h"
 #include "velox/type/Type.h"
 
+#ifdef _MSC_VER
+#include "absl/numeric/int128.h"
+#endif
+
 namespace facebook::velox::functions::sparksql {
 using int256_t = boost::multiprecision::int256_t;
+
+#ifdef _MSC_VER
+// On MSVC, int128_t is absl::int128 (a class), not a builtin.
+// boost::multiprecision::int256_t has no constructor for absl::int128/uint128,
+// so we decompose into two 64-bit halves for the conversion.
+inline int256_t int128ToInt256(int128_t v) {
+  bool negative = (v < 0);
+  absl::uint128 uv = negative
+      ? static_cast<absl::uint128>(-v)
+      : static_cast<absl::uint128>(v);
+  int256_t result = static_cast<uint64_t>(absl::Uint128High64(uv));
+  result = (result << 64) | static_cast<uint64_t>(absl::Uint128Low64(uv));
+  return negative ? -result : result;
+}
+inline int256_t uint128ToInt256(uint128_t v) {
+  int256_t result = static_cast<uint64_t>(absl::Uint128High64(v));
+  result = (result << 64) | static_cast<uint64_t>(absl::Uint128Low64(v));
+  return result;
+}
+// Convert int256_t to absl::uint128 (lower 128 bits).
+inline uint128_t int256ToUint128(int256_t v) {
+  uint64_t lo = static_cast<uint64_t>(v & 0xFFFFFFFFFFFFFFFFULL);
+  uint64_t hi = static_cast<uint64_t>((v >> 64) & 0xFFFFFFFFFFFFFFFFULL);
+  return absl::MakeUint128(hi, lo);
+}
+#else
+inline int256_t int128ToInt256(int128_t v) {
+  return static_cast<int256_t>(v);
+}
+inline int256_t uint128ToInt256(uint128_t v) {
+  return static_cast<int256_t>(v);
+}
+inline uint128_t int256ToUint128(int256_t v) {
+  return static_cast<uint128_t>(v);
+}
+#endif
 
 // DecimalUtil holds the utility function for Spark sql.
 class DecimalUtil {
@@ -57,13 +103,23 @@ class DecimalUtil {
     typedef typename std::
         conditional<std::is_same_v<T, int64_t>, uint64_t, __uint128_t>::type UT;
     T result = 0;
-    constexpr auto uintMask =
-        static_cast<int256_t>(std::numeric_limits<UT>::max());
+    // Build the mask for the lower sizeof(T)*8 bits.
+    // On MSVC, absl::uint128 cannot be directly cast to int256_t, so we use
+    // the platform-specific uint128ToInt256 helper.
+    const int256_t uintMask = std::is_same_v<T, int64_t>
+        ? static_cast<int256_t>(std::numeric_limits<uint64_t>::max())
+        : uint128ToInt256(std::numeric_limits<uint128_t>::max());
 
     int256_t inAbs = abs(in);
     bool isNegative = in < 0;
 
-    UT unsignResult = (inAbs & uintMask).convert_to<UT>();
+    // On MSVC, convert_to<absl::uint128> may not work; extract via helper.
+    UT unsignResult;
+    if constexpr (std::is_same_v<T, int64_t>) {
+      unsignResult = static_cast<uint64_t>((inAbs & uintMask).convert_to<uint64_t>());
+    } else {
+      unsignResult = int256ToUint128(inAbs & uintMask);
+    }
     inAbs >>= sizeof(T) * 8;
 
     if (inAbs > 0) {
@@ -185,9 +241,9 @@ class DecimalUtil {
         overflow = true;
         return R(-1);
       }
-      int256_t aLarge = a;
+      int256_t aLarge = int128ToInt256(static_cast<int128_t>(a));
       int256_t aLargeScaledUp = aLarge * getPowersOfTen(aRescale);
-      int256_t bLarge = b;
+      int256_t bLarge = int128ToInt256(static_cast<int128_t>(b));
       int256_t resultLarge = aLargeScaledUp / bLarge;
       int256_t remainderLarge = aLargeScaledUp % bLarge;
       /// Since we are scaling up and then, scaling down, round-up the result

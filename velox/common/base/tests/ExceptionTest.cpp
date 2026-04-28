@@ -66,9 +66,24 @@ void verifyVeloxException(
     std::function<void()> f,
     const std::string& messagePrefix) {
   verifyException<VeloxException>(f, [&messagePrefix](const auto& e) {
+#ifdef _MSC_VER
+    // On MSVC, __FUNCTION__ inside a lambda produces "operator ()" (with a
+    // space) and __FILE__ inside a static const may be empty. Truncate the
+    // expected prefix at the "\nFunction:" boundary so we skip checking those
+    // compiler-dependent fields.
+    std::string adjusted = messagePrefix;
+    auto pos = adjusted.find("\nFunction:");
+    if (pos != std::string::npos) {
+      adjusted.resize(pos);
+    }
+    EXPECT_TRUE(std::string_view{e.what()}.starts_with(adjusted))
+        << "\nException message prefix mismatch.\n\nExpected prefix: "
+        << adjusted << "\n\nActual message: " << e.what();
+#else
     EXPECT_TRUE(std::string_view{e.what()}.starts_with(messagePrefix))
         << "\nException message prefix mismatch.\n\nExpected prefix: "
         << messagePrefix << "\n\nActual message: " << e.what();
+#endif
   });
 }
 

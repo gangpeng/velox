@@ -419,7 +419,7 @@ std::string PrestoQueryRunner::createTable(
   // Delete the all-null row.
   execute(fmt::format("DELETE FROM {}", name));
 
-  return tableDirectoryPath;
+  return tableDirectoryPath.string();
 }
 
 void PrestoQueryRunner::cleanUp(const std::string& name) {

@@ -366,7 +366,7 @@ if(VELOX_ENABLE_BENCHMARKS)
     glog::glog
     gflags::gflags
     Folly::folly
-    pthread
+    $<$<NOT:$<BOOL:${MSVC}>>:pthread>
   )
 
   add_executable(velox_spiller_join_benchmark SpillerJoinInputBenchmarkTest.cpp)
@@ -391,7 +391,7 @@ if(VELOX_ENABLE_BENCHMARKS)
     glog::glog
     gflags::gflags
     Folly::folly
-    pthread
+    $<$<NOT:$<BOOL:${MSVC}>>:pthread>
   )
 
   add_executable(velox_spiller_aggregate_benchmark SpillerAggregateBenchmarkTest.cpp)

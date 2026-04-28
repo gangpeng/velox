@@ -19,14 +19,152 @@
 
 #include <fmt/format.h>
 #include <glog/logging.h>
+#include <algorithm>
 #include <memory>
 #include <stdexcept>
 
+#include <folly/ScopeGuard.h>
 #include <folly/portability/SysUio.h>
 #ifdef linux
 #include <linux/fs.h>
 #endif // linux
+#ifndef _WIN32
+#include <fcntl.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#else
+// Windows CRT file I/O equivalents.
+#include <fcntl.h>
+#include <io.h>
+#include <sys/stat.h>
+#include <windows.h>
+// Map POSIX names to Windows CRT equivalents. Note: we intentionally do NOT
+// define macros for `close`, `write`, and `read` because they collide with
+// member function names in other Velox classes (e.g. LocalWriteFile,
+// ByteStream). Those are wrapped via posix_write(), posix_close(), and
+// posix_read() inline functions defined later in this file.
+#define open _open
+#define lseek _lseek
+#define ftruncate(fd, sz) _chsize_s(fd, sz)
+#define fsync _commit
+// S_IRUSR / S_IWUSR are not defined in MSVC CRT; use equivalent Windows mode.
+#ifndef S_IRUSR
+#define S_IRUSR _S_IREAD
+#endif
+#ifndef S_IWUSR
+#define S_IWUSR _S_IWRITE
+#endif
+
+#ifdef _MSC_VER
+namespace {
+void ignoreInvalidParameter(
+    const wchar_t*,
+    const wchar_t*,
+    const wchar_t*,
+    unsigned int,
+    uintptr_t) {}
+
+template <typename Func>
+auto crtCallNoAbort(Func&& func) {
+  // MSVC's CRT calls the invalid-parameter handler instead of returning errno
+  // for stale file descriptors. Keep POSIX-style error reporting so Velox can
+  // raise a normal exception.
+  const auto oldHandler =
+      _set_thread_local_invalid_parameter_handler(ignoreInvalidParameter);
+  auto guard = folly::makeGuard([&]() {
+    _set_thread_local_invalid_parameter_handler(oldHandler);
+  });
+  return func();
+}
+
+intptr_t getOsFileHandleNoAbort(int fd) {
+  return crtCallNoAbort([&]() { return ::_get_osfhandle(fd); });
+}
+
+int closeNoAbort(int fd) {
+  return crtCallNoAbort([&]() { return ::_close(fd); });
+}
+} // namespace
+#endif
+
+// pread: positional read using OVERLAPPED I/O to be thread-safe.
+// Loops to handle count > DWORD_MAX (4GB).
+inline ssize_t pread(int fd, void* buf, size_t count, int64_t offset) {
+  HANDLE h = reinterpret_cast<HANDLE>(getOsFileHandleNoAbort(fd));
+  if (h == INVALID_HANDLE_VALUE) {
+    return -1;
+  }
+  size_t totalRead = 0;
+  auto* dest = static_cast<char*>(buf);
+  while (totalRead < count) {
+    DWORD chunkSize =
+        static_cast<DWORD>(std::min<size_t>(count - totalRead, MAXDWORD));
+    LARGE_INTEGER liOffset;
+    liOffset.QuadPart = offset + totalRead;
+    OVERLAPPED ov = {};
+    ov.Offset = liOffset.LowPart;
+    ov.OffsetHigh = liOffset.HighPart;
+    ov.hEvent = ::CreateEventA(nullptr, TRUE, FALSE, nullptr);
+    if (ov.hEvent == nullptr) {
+      return totalRead > 0 ? static_cast<ssize_t>(totalRead) : -1;
+    }
+    DWORD bytesRead = 0;
+    if (!ReadFile(h, dest + totalRead, chunkSize, nullptr, &ov)) {
+      const auto error = ::GetLastError();
+      if (error == ERROR_IO_PENDING) {
+        if (!::GetOverlappedResult(h, &ov, &bytesRead, TRUE)) {
+          ::CloseHandle(ov.hEvent);
+          return totalRead > 0 ? static_cast<ssize_t>(totalRead) : -1;
+        }
+      } else if (error == ERROR_HANDLE_EOF) {
+        ::CloseHandle(ov.hEvent);
+        break;
+      } else {
+        ::CloseHandle(ov.hEvent);
+        return totalRead > 0 ? static_cast<ssize_t>(totalRead) : -1;
+      }
+    } else if (!::GetOverlappedResult(h, &ov, &bytesRead, FALSE)) {
+      ::CloseHandle(ov.hEvent);
+      return totalRead > 0 ? static_cast<ssize_t>(totalRead) : -1;
+    }
+    ::CloseHandle(ov.hEvent);
+    if (bytesRead == 0) {
+      break; // EOF.
+    }
+    totalRead += bytesRead;
+  }
+  return static_cast<ssize_t>(totalRead);
+}
+// pwrite: positional write using OVERLAPPED I/O.
+// Loops to handle count > DWORD_MAX (4GB).
+inline ssize_t pwrite(int fd, const void* buf, size_t count, int64_t offset) {
+  HANDLE h = reinterpret_cast<HANDLE>(getOsFileHandleNoAbort(fd));
+  if (h == INVALID_HANDLE_VALUE) {
+    return -1;
+  }
+  size_t totalWritten = 0;
+  const auto* src = static_cast<const char*>(buf);
+  while (totalWritten < count) {
+    DWORD chunkSize =
+        static_cast<DWORD>(std::min<size_t>(count - totalWritten, MAXDWORD));
+    LARGE_INTEGER liOffset;
+    liOffset.QuadPart = offset + totalWritten;
+    OVERLAPPED ov = {};
+    ov.Offset = liOffset.LowPart;
+    ov.OffsetHigh = liOffset.HighPart;
+    DWORD bytesWritten = 0;
+    if (!WriteFile(h, src + totalWritten, chunkSize, &bytesWritten, &ov)) {
+      return totalWritten > 0 ? static_cast<ssize_t>(totalWritten) : -1;
+    }
+    if (bytesWritten == 0) {
+      break;
+    }
+    totalWritten += bytesWritten;
+  }
+  return static_cast<ssize_t>(totalWritten);
+}
+#endif
 
 namespace facebook::velox {
 
@@ -85,6 +223,52 @@ T getAttribute(
   }
   return defaultValue;
 }
+
+#ifdef _WIN32
+void collapseDuplicateBackslashes(std::string& path, size_t start) {
+  size_t write = start;
+  bool previousWasBackslash = false;
+  for (size_t read = start; read < path.size(); ++read) {
+    if (path[read] == '\\') {
+      if (previousWasBackslash) {
+        continue;
+      }
+      previousWasBackslash = true;
+    } else {
+      previousWasBackslash = false;
+    }
+    path[write++] = path[read];
+  }
+  path.resize(write);
+}
+
+std::string toWindowsExtendedPath(std::string_view path) {
+  std::string result(path);
+  if (result.rfind(R"(\\?\)", 0) == 0 || result.rfind(R"(\\.\)", 0) == 0) {
+    return result;
+  }
+
+  std::replace(result.begin(), result.end(), '/', '\\');
+  if (result.rfind(R"(\\)", 0) == 0) {
+    // The \\?\ prefix disables Win32 path normalization. Collapse duplicate
+    // separators and resolve lexical '..' segments from POSIX-style joins
+    // while preserving the UNC introducer.
+    collapseDuplicateBackslashes(result, 2);
+    result = fs::path(result).lexically_normal().string();
+    return R"(\\?\UNC\)" + result.substr(2);
+  }
+  if (result.size() >= 2 && result[1] == ':') {
+    // MSVC CRT and Win32 file APIs need the extended-path prefix to open local
+    // files once deeply nested partition directories exceed MAX_PATH. Because
+    // extended paths are not normalized by Win32, clean up duplicate
+    // separators and lexical '..' segments before adding the prefix.
+    collapseDuplicateBackslashes(result, 2);
+    result = fs::path(result).lexically_normal().string();
+    return R"(\\?\)" + result;
+  }
+  return result;
+}
+#endif
 } // namespace
 
 std::string ReadFile::pread(
@@ -175,11 +359,51 @@ LocalReadFile::LocalReadFile(
     bool bufferIo)
     : executor_(executor), path_(path) {
   int32_t flags = O_RDONLY;
+#ifdef _WIN32
+  flags |= O_BINARY;
+#endif
 #ifdef linux
   if (!bufferIo) {
     flags |= O_DIRECT;
   }
 #endif // linux
+#ifdef _WIN32
+  // Open Windows read handles for overlapped I/O so pread() can issue
+  // concurrent offset-based reads without racing on the handle's file pointer.
+  const auto nativePath = toWindowsExtendedPath(path_);
+  HANDLE handle = ::CreateFileA(
+      nativePath.c_str(),
+      GENERIC_READ,
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+      nullptr,
+      OPEN_EXISTING,
+      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
+      nullptr);
+  if (handle == INVALID_HANDLE_VALUE) {
+    const auto error = ::GetLastError();
+    if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) {
+      VELOX_FILE_NOT_FOUND_ERROR("No such file or directory: {}", path);
+    }
+    VELOX_FAIL(
+        "open failure in LocalReadFile constructor, {} {}.", path, error);
+  }
+  LARGE_INTEGER fileSize;
+  if (!::GetFileSizeEx(handle, &fileSize)) {
+    const auto error = ::GetLastError();
+    ::CloseHandle(handle);
+    VELOX_FAIL(
+        "fseek failure in LocalReadFile constructor, {} {}.", path, error);
+  }
+  fd_ = _open_osfhandle(reinterpret_cast<intptr_t>(handle), flags);
+  if (fd_ < 0) {
+    ::CloseHandle(handle);
+    VELOX_FAIL(
+        "open failure in LocalReadFile constructor, {} {}.",
+        path,
+        folly::errnoStr(errno));
+  }
+  size_ = fileSize.QuadPart;
+#else
   fd_ = open(path_.c_str(), flags);
   if (fd_ < 0) {
     if (errno == ENOENT) {
@@ -201,13 +425,34 @@ LocalReadFile::LocalReadFile(
       path,
       folly::errnoStr(errno));
   size_ = ret;
+#endif
 }
 
 LocalReadFile::LocalReadFile(int32_t fd, folly::Executor* executor)
-    : executor_(executor), fd_(fd) {}
+    : executor_(executor), fd_(fd) {
+#ifdef _WIN32
+  // This constructor is used by tests to wrap both valid and intentionally
+  // stale descriptors. Leave size_ as zero if the descriptor is already closed
+  // and let the read path report the descriptor error.
+  struct __stat64 fileStat;
+  if (crtCallNoAbort([&]() { return ::_fstat64(fd_, &fileStat); }) == 0) {
+    size_ = static_cast<uint64_t>(fileStat.st_size);
+  }
+#else
+  struct stat fileStat;
+  if (::fstat(fd_, &fileStat) == 0) {
+    size_ = static_cast<uint64_t>(fileStat.st_size);
+  }
+#endif
+}
 
 LocalReadFile::~LocalReadFile() {
-  const int ret = close(fd_);
+  const int ret =
+#ifdef _WIN32
+      closeNoAbort(fd_);
+#else
+      close(fd_);
+#endif
   if (ret < 0) {
     LOG(WARNING) << "close failure in LocalReadFile destructor: " << ret << ", "
                  << folly::errnoStr(errno);
@@ -240,6 +485,23 @@ uint64_t LocalReadFile::preadv(
     uint64_t offset,
     const std::vector<folly::Range<char*>>& buffers,
     const FileIoContext& context) const {
+#ifdef _WIN32
+  // folly::preadv uses CRT positional I/O on Windows and is not compatible
+  // with the overlapped handles used above. Issue discrete overlapped reads
+  // and skip gaps here. Do not delegate to ReadFile::preadv(), because it
+  // bounds reads by size(); SSD cache files can grow after the read handle is
+  // opened, making the cached size stale.
+  uint64_t totalBytesRead = 0;
+  for (const auto& range : buffers) {
+    const auto bytes = range.size();
+    if (range.data() != nullptr && bytes > 0) {
+      preadInternal(offset, bytes, range.data());
+    }
+    offset += bytes;
+    totalBytesRead += bytes;
+  }
+  return totalBytesRead;
+#else
   // Dropped bytes sized so that a typical dropped range of 50K is not
   // too many iovecs.
   static thread_local std::vector<char> droppedBytes(16 * 1024);
@@ -291,6 +553,7 @@ uint64_t LocalReadFile::preadv(
   }
 
   return totalBytesRead;
+#endif
 }
 
 folly::SemiFuture<uint64_t> LocalReadFile::preadvAsync(
@@ -338,12 +601,15 @@ LocalWriteFile::LocalWriteFile(
   const auto dir = fs::path(path_).parent_path();
   if (shouldCreateParentDirectories && !fs::exists(dir)) {
     VELOX_CHECK(
-        common::generateFileDirectory(dir.c_str()),
+        common::generateFileDirectory(dir.string().c_str()),
         "Failed to generate file directory");
   }
 
   // File open flags: write-only, create the file if it doesn't exist.
   int32_t flags = O_WRONLY | O_CREAT;
+#ifdef _WIN32
+  flags |= O_BINARY;
+#endif
   if (shouldThrowOnFileAlreadyExists) {
     flags |= O_EXCL;
   }
@@ -360,9 +626,15 @@ LocalWriteFile::LocalWriteFile(
   // stack will be applied as the file mode.
   const int32_t mode = S_IRUSR | S_IWUSR;
 
-  std::unique_ptr<char[]> buf(new char[path_.size() + 1]);
-  buf[path_.size()] = 0;
-  ::memcpy(buf.get(), path_.data(), path_.size());
+  const auto nativePath =
+#ifdef _WIN32
+      toWindowsExtendedPath(path_);
+#else
+      std::string(path_);
+#endif
+  std::unique_ptr<char[]> buf(new char[nativePath.size() + 1]);
+  buf[nativePath.size()] = 0;
+  ::memcpy(buf.get(), nativePath.data(), nativePath.size());
   fd_ = open(buf.get(), flags, mode);
   VELOX_CHECK_GE(
       fd_,
@@ -392,9 +664,29 @@ LocalWriteFile::~LocalWriteFile() {
   }
 }
 
+#ifdef _MSC_VER
+namespace {
+inline int posix_write(int fd, const void* buf, unsigned int count) {
+  return crtCallNoAbort([&]() { return ::_write(fd, buf, count); });
+}
+inline int posix_close(int fd) {
+  return closeNoAbort(fd);
+}
+} // namespace
+#else
+namespace {
+inline int posix_write(int fd, const void* buf, size_t count) {
+  return ::write(fd, buf, count);
+}
+inline int posix_close(int fd) {
+  return ::close(fd);
+}
+} // namespace
+#endif
+
 void LocalWriteFile::append(std::string_view data) {
   checkNotClosed(closed_);
-  const uint64_t bytesWritten = ::write(fd_, data.data(), data.size());
+  const uint64_t bytesWritten = posix_write(fd_, data.data(), data.size());
   VELOX_CHECK_EQ(
       bytesWritten,
       data.size(),
@@ -411,7 +703,7 @@ void LocalWriteFile::append(std::unique_ptr<folly::IOBuf> data) {
   for (auto rangeIter = data->begin(); rangeIter != data->end(); ++rangeIter) {
     const auto bytesToWrite = rangeIter->size();
     const uint64_t bytesWritten =
-        ::write(fd_, rangeIter->data(), rangeIter->size());
+        posix_write(fd_, rangeIter->data(), rangeIter->size());
     totalBytesWritten += bytesWritten;
     if (bytesWritten != bytesToWrite) {
       VELOX_FAIL(
@@ -437,8 +729,31 @@ void LocalWriteFile::write(
     int64_t length) {
   checkNotClosed(closed_);
   VELOX_CHECK_GE(offset, 0, "Offset cannot be negative.");
-  const auto bytesWritten = ::pwritev(
+#ifdef _WIN32
+  // folly::pwritev is implemented on top of CRT file APIs on Windows. Use the
+  // OVERLAPPED pwrite shim above so multi-range SSD cache writes remain
+  // positional and do not depend on shared file-pointer state.
+  int64_t bytesWritten{0};
+  for (const auto& iovec : iovecs) {
+    auto* data = static_cast<const char*>(iovec.iov_base);
+    size_t bytesLeft = iovec.iov_len;
+    while (bytesLeft > 0) {
+      const auto written = ::pwrite(fd_, data, bytesLeft, offset + bytesWritten);
+      VELOX_CHECK_GT(
+          written,
+          0,
+          "Failure in LocalWriteFile::write at offset {}: {}",
+          offset + bytesWritten,
+          folly::errnoStr(errno));
+      bytesWritten += written;
+      data += written;
+      bytesLeft -= written;
+    }
+  }
+#else
+  const auto bytesWritten = folly::pwritev(
       fd_, iovecs.data(), static_cast<ssize_t>(iovecs.size()), offset);
+#endif
   VELOX_CHECK_EQ(
       bytesWritten,
       length,
@@ -506,7 +821,7 @@ std::unordered_map<std::string, std::string> LocalWriteFile::getAttributes()
 
 void LocalWriteFile::close() {
   if (!closed_) {
-    const auto ret = ::close(fd_);
+    const auto ret = posix_close(fd_);
     VELOX_CHECK_EQ(
         ret,
         0,

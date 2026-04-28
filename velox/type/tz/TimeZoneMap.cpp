@@ -18,8 +18,11 @@
 
 #include <boost/algorithm/string.hpp>
 #include <fmt/core.h>
-#include <folly/container/F14Map.h>
-#include <folly/container/F14Set.h>
+#include <unordered_map>
+#include <unordered_set>
+// F14Map/F14Set replaced with std equivalents to avoid AVX2 alignment issues on Windows/MSVC
+// #include <folly/container/F14Map.h>
+// #include <folly/container/F14Set.h>
 
 #include "velox/common/base/Exceptions.h"
 #include "velox/common/testutil/TestValue.h"
@@ -32,7 +35,7 @@ using facebook::velox::common::testutil::TestValue;
 namespace facebook::velox::tz {
 
 using TTimeZoneDatabase = std::vector<std::unique_ptr<TimeZone>>;
-using TTimeZoneIndex = folly::F14FastMap<std::string, const TimeZone*>;
+using TTimeZoneIndex = std::unordered_map<std::string, const TimeZone*>;
 
 // Defined in TimeZoneDatabase.cpp
 extern const std::vector<std::pair<int16_t, std::string>>& getTimeZoneEntries();
@@ -142,9 +145,9 @@ inline bool isTimeZoneOffset(std::string_view str) {
 // The timezone parsing logic follows what is defined here:
 //   https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 inline bool isUtcEquivalentName(std::string_view zone) {
-  static folly::F14FastSet<std::string> utcSet = {
+  static std::unordered_set<std::string> utcSet = {
       "utc", "uct", "gmt", "gmt0", "greenwich", "universal", "zulu", "z"};
-  return utcSet.find(zone) != utcSet.end();
+  return utcSet.find(std::string(zone)) != utcSet.end();
 }
 
 // This function tries to apply two normalization rules to time zone offsets:
@@ -237,8 +240,10 @@ std::string normalizeTimeZone(const std::string& originalZoneId) {
   return originalZoneId;
 }
 
-template <typename TDuration>
-void validateRangeImpl(time_point<TDuration> timePoint) {
+#ifdef _MSC_VER
+#pragma optimize("", off)
+#endif
+void validateRangeImplSeconds(time_point<std::chrono::seconds> timePoint) {
   using namespace velox::date;
   static constexpr auto kMinYear = year::min();
   static constexpr auto kMaxYear = year::max();
@@ -258,8 +263,35 @@ void validateRangeImpl(time_point<TDuration> timePoint) {
   auto year = year_month_day(floor<days>(timePoint)).year();
 
   if (year < kMinYear || year > kMaxYear) {
-    // This is a special case where we intentionally throw
-    // VeloxRuntimeError to avoid it being suppressed by TRY().
+    VELOX_USER_FAIL(
+        "Timepoint is outside of supported year range: [{}, {}], got {}",
+        static_cast<int64_t>(kMinYear),
+        static_cast<int64_t>(kMaxYear),
+        static_cast<int64_t>(year));
+  }
+}
+
+void validateRangeImplMilliseconds(
+    time_point<std::chrono::milliseconds> timePoint) {
+  using namespace velox::date;
+  static constexpr auto kMinYear = year::min();
+  static constexpr auto kMaxYear = year::max();
+
+  if (timePoint.time_since_epoch() <
+          std::chrono::seconds(std::numeric_limits<int64_t>::min() / 1000) ||
+      timePoint.time_since_epoch() >
+          std::chrono::seconds(std::numeric_limits<int64_t>::max() / 1000)) {
+    VELOX_USER_FAIL(
+        "Timepoint is outside of supported timestamp seconds since epoch range: [{}, {}], got {}",
+        std::chrono::seconds(std::numeric_limits<int64_t>::min() / 1000)
+            .count(),
+        std::chrono::seconds(std::numeric_limits<int64_t>::max() / 1000)
+            .count(),
+        static_cast<int64_t>(timePoint.time_since_epoch().count()));
+  }
+  auto year = year_month_day(floor<days>(timePoint)).year();
+
+  if (year < kMinYear || year > kMaxYear) {
     VELOX_USER_FAIL(
         "Timepoint is outside of supported year range: [{}, {}], got {}",
         static_cast<int64_t>(kMinYear),
@@ -284,40 +316,65 @@ tzdb::zoned_time<TDuration> getZonedTime(
   return tzdb::zoned_time{tz, timestamp, dateChoose};
 }
 
-template <typename TDuration>
-TDuration toSysImpl(
-    const TDuration& timestamp,
+TimeZone::seconds toSysImplSeconds(
+    const TimeZone::seconds& timestamp,
     const TimeZone::TChoose choose,
     const tzdb::time_zone* tz,
     const std::chrono::minutes offset) {
-  date::local_time<TDuration> timePoint{timestamp};
-  validateRange(date::sys_time<TDuration>{timestamp});
+  date::local_time<TimeZone::seconds> timePoint{timestamp};
+  validateRange(date::sys_time<TimeZone::seconds>{timestamp});
 
   if (tz == nullptr) {
-    // We can ignore `choose` as time offset conversions are always linear.
     return (timePoint - offset).time_since_epoch();
   }
 
   return getZonedTime(tz, timePoint, choose).get_sys_time().time_since_epoch();
 }
 
-template <typename TDuration>
-TDuration toLocalImpl(
-    const TDuration& timestamp,
+TimeZone::milliseconds toSysImplMilliseconds(
+    const TimeZone::milliseconds& timestamp,
+    const TimeZone::TChoose choose,
     const tzdb::time_zone* tz,
     const std::chrono::minutes offset) {
-  date::sys_time<TDuration> timePoint{timestamp};
+  date::local_time<TimeZone::milliseconds> timePoint{timestamp};
+  validateRange(date::sys_time<TimeZone::milliseconds>{timestamp});
+
+  if (tz == nullptr) {
+    return (timePoint - offset).time_since_epoch();
+  }
+
+  return getZonedTime(tz, timePoint, choose).get_sys_time().time_since_epoch();
+}
+
+TimeZone::seconds toLocalImplSeconds(
+    const TimeZone::seconds& timestamp,
+    const tzdb::time_zone* tz,
+    const std::chrono::minutes offset) {
+  date::sys_time<TimeZone::seconds> timePoint{timestamp};
   validateRange(timePoint);
 
-  // If this is an offset time zone.
   if (tz == nullptr) {
     return (timePoint + offset).time_since_epoch();
   }
   return tzdb::zoned_time{tz, timePoint}.get_local_time().time_since_epoch();
 }
 
-template <bool isLongName>
-std::string getName(
+TimeZone::milliseconds toLocalImplMilliseconds(
+    const TimeZone::milliseconds& timestamp,
+    const tzdb::time_zone* tz,
+    const std::chrono::minutes offset) {
+  date::sys_time<TimeZone::milliseconds> timePoint{timestamp};
+  validateRange(timePoint);
+
+  if (tz == nullptr) {
+    return (timePoint + offset).time_since_epoch();
+  }
+  return tzdb::zoned_time{tz, timePoint}.get_local_time().time_since_epoch();
+}
+
+// On MSVC, split into two non-template functions to avoid internal compiler
+// error triggered by if constexpr in a bool template parameter function.
+std::string getShortNameImpl(
     TimeZone::milliseconds timestamp,
     TimeZone::TChoose choose,
     const tzdb::time_zone* tz,
@@ -337,29 +394,49 @@ std::string getName(
       "Unable to find short name for time zone: {}",
       timeZoneName);
 
-  // According to the documentation this is how to determine if DST applies to
-  // a given timestamp in a given time zone.
-  // https://howardhinnant.github.io/date/tz.html#sys_info
   date::local_time<TimeZone::milliseconds> timePoint{timestamp};
   bool isDst = getZonedTime(tz, timePoint, choose).get_info().save !=
       std::chrono::minutes(0);
 
-  if constexpr (isLongName) {
-    return isDst ? it->second.daylightTimeLongName
-                 : it->second.standardTimeLongName;
-  } else {
-    return isDst ? it->second.daylightTimeAbbreviation
-                 : it->second.standardTimeAbbreviation;
+  return isDst ? it->second.daylightTimeAbbreviation
+               : it->second.standardTimeAbbreviation;
+}
+
+std::string getLongNameImpl(
+    TimeZone::milliseconds timestamp,
+    TimeZone::TChoose choose,
+    const tzdb::time_zone* tz,
+    const std::string& timeZoneName) {
+  validateRange(date::sys_time<TimeZone::milliseconds>(timestamp));
+
+  // Time zone offsets only have one name.
+  if (tz == nullptr) {
+    return timeZoneName;
   }
+
+  static const auto& timeZoneNames = getTimeZoneNames();
+  auto it = timeZoneNames.find(timeZoneName);
+
+  VELOX_CHECK(
+      it != timeZoneNames.end(),
+      "Unable to find short name for time zone: {}",
+      timeZoneName);
+
+  date::local_time<TimeZone::milliseconds> timePoint{timestamp};
+  bool isDst = getZonedTime(tz, timePoint, choose).get_info().save !=
+      std::chrono::minutes(0);
+
+  return isDst ? it->second.daylightTimeLongName
+               : it->second.standardTimeLongName;
 }
 } // namespace
 
 void validateRange(time_point<std::chrono::seconds> timePoint) {
-  validateRangeImpl(timePoint);
+  validateRangeImplSeconds(timePoint);
 }
 
 void validateRange(time_point<std::chrono::milliseconds> timePoint) {
-  validateRangeImpl(timePoint);
+  validateRangeImplMilliseconds(timePoint);
 }
 
 std::string getTimeZoneName(int64_t timeZoneID) {
@@ -454,22 +531,22 @@ std::vector<int16_t> getTimeZoneIDs() {
 TimeZone::seconds TimeZone::to_sys(
     TimeZone::seconds timestamp,
     TimeZone::TChoose choose) const {
-  return toSysImpl(timestamp, choose, tz_, offset_);
+  return toSysImplSeconds(timestamp, choose, tz_, offset_);
 }
 
 TimeZone::milliseconds TimeZone::to_sys(
     TimeZone::milliseconds timestamp,
     TimeZone::TChoose choose) const {
-  return toSysImpl(timestamp, choose, tz_, offset_);
+  return toSysImplMilliseconds(timestamp, choose, tz_, offset_);
 }
 
 TimeZone::seconds TimeZone::to_local(TimeZone::seconds timestamp) const {
-  return toLocalImpl(timestamp, tz_, offset_);
+  return toLocalImplSeconds(timestamp, tz_, offset_);
 }
 
 TimeZone::milliseconds TimeZone::to_local(
     TimeZone::milliseconds timestamp) const {
-  return toLocalImpl(timestamp, tz_, offset_);
+  return toLocalImplMilliseconds(timestamp, tz_, offset_);
 }
 
 TimeZone::seconds TimeZone::correct_nonexistent_time(
@@ -493,12 +570,15 @@ TimeZone::seconds TimeZone::correct_nonexistent_time(
 std::string TimeZone::getShortName(
     TimeZone::milliseconds timestamp,
     TimeZone::TChoose choose) const {
-  return getName<false>(timestamp, choose, tz_, timeZoneName_);
+  return getShortNameImpl(timestamp, choose, tz_, timeZoneName_);
 }
 
 std::string TimeZone::getLongName(
     TimeZone::milliseconds timestamp,
     TimeZone::TChoose choose) const {
-  return getName<true>(timestamp, choose, tz_, timeZoneName_);
+  return getLongNameImpl(timestamp, choose, tz_, timeZoneName_);
 }
 } // namespace facebook::velox::tz
+#ifdef _MSC_VER
+#pragma optimize("", on)
+#endif

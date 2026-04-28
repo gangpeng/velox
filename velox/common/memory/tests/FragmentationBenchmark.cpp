@@ -61,11 +61,11 @@ class FragmentationTest {
     rng_.seed(1);
     // 2G between 4K an 100K
     // 2G exactly 128K
-    addSizes(2L << 30, 128 << 10, 128 << 10);
+    addSizes(2LL << 30, 128 << 10, 128 << 10);
     // 2G between 1MB and 8MB
-    addSizes(2L << 30, 1 << 20, 8 << 20);
+    addSizes(2LL << 30, 1 << 20, 8 << 20);
     // 2G between 100MB and 400MB
-    addSizes(2L << 30, 1L << 12, 100 << 12);
+    addSizes(2LL << 30, 1LL << 12, 100 << 12);
     // 1.9G of 128M, 256M, 512M and 1024M
     addSizes(1, 128 << 20, 128 << 20);
     addSizes(1, 128 << 20, 128 << 20);
@@ -73,7 +73,7 @@ class FragmentationTest {
     addSizes(1, 512 << 20, 512 << 20);
     addSizes(1, 1024 << 20, 1024 << 20);
     buckets_.push_back(0);
-    for (size_t bucket = 1 << 16; bucket <= 1L << 30; bucket *= 2) {
+    for (size_t bucket = 1 << 16; bucket <= 1LL << 30; bucket *= 2) {
       buckets_.push_back(bucket);
     }
   }

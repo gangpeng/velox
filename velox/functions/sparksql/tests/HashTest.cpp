@@ -78,11 +78,11 @@ TEST_F(HashTest, String) {
 }
 
 TEST_F(HashTest, longDecimal) {
-  EXPECT_EQ(hash<int128_t>(12345678), -277285195);
-  EXPECT_EQ(hash<int128_t>(0), -783713497);
+  EXPECT_EQ(hash<int128_t>(int128_t(12345678)), -277285195);
+  EXPECT_EQ(hash<int128_t>(int128_t(0)), -783713497);
   EXPECT_EQ(hash<int128_t>(DecimalUtil::kLongDecimalMin), 1400911110);
   EXPECT_EQ(hash<int128_t>(DecimalUtil::kLongDecimalMax), -817514053);
-  EXPECT_EQ(hash<int128_t>(-12345678), -1198355617);
+  EXPECT_EQ(hash<int128_t>(int128_t(-12345678)), -1198355617);
   EXPECT_EQ(hash<int128_t>(std::nullopt), 42);
 }
 

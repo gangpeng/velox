@@ -12,36 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_executable(
-  velox_dwio_arrow_parquet_writer_test
-  BloomFilterTest.cpp
-  ColumnReaderTest.cpp
-  ColumnWriterTest.cpp
-  EncodingTest.cpp
-  FileDeserializeTest.cpp
-  FileSerializeTest.cpp
-  MetadataTest.cpp
-  PageIndexTest.cpp
-  PropertiesTest.cpp
-  SchemaTest.cpp
-  StatisticsTest.cpp
-  TypesTest.cpp
-)
-
-add_test(velox_dwio_arrow_parquet_writer_test velox_dwio_arrow_parquet_writer_test)
-
-target_link_libraries(
-  velox_dwio_arrow_parquet_writer_test
-  velox_dwio_arrow_parquet_writer_test_lib
-  GTest::gmock
-  GTest::gtest
-  GTest::gtest_main
-  arrow
-  arrow_testing
-  velox_dwio_native_parquet_reader
-  velox_test_util
-)
-
+# The test utility library is needed by other test targets even when
+# arrow_testing is unavailable, so define it unconditionally.
 add_library(
   velox_dwio_arrow_parquet_writer_test_lib
   BloomFilter.cpp
@@ -59,3 +31,41 @@ target_link_libraries(
   velox_dwio_arrow_parquet_writer_lib
   GTest::gtest
 )
+
+# The test executable depends on Arrow's test library (arrow_testing) which is
+# only available when Arrow is built with -DARROW_TESTING=ON. When arrow_testing
+# is just an empty INTERFACE target, skip building the test.
+get_target_property(_arrow_testing_type arrow_testing TYPE)
+if(NOT _arrow_testing_type STREQUAL "INTERFACE_LIBRARY")
+  add_executable(
+    velox_dwio_arrow_parquet_writer_test
+    BloomFilterTest.cpp
+    ColumnReaderTest.cpp
+    ColumnWriterTest.cpp
+    EncodingTest.cpp
+    FileDeserializeTest.cpp
+    FileSerializeTest.cpp
+    MetadataTest.cpp
+    PageIndexTest.cpp
+    PropertiesTest.cpp
+    SchemaTest.cpp
+    StatisticsTest.cpp
+    TypesTest.cpp
+  )
+
+  add_test(velox_dwio_arrow_parquet_writer_test velox_dwio_arrow_parquet_writer_test)
+
+  target_link_libraries(
+    velox_dwio_arrow_parquet_writer_test
+    velox_dwio_arrow_parquet_writer_test_lib
+    GTest::gmock
+    GTest::gtest
+    GTest::gtest_main
+    arrow
+    arrow_testing
+    velox_dwio_native_parquet_reader
+    velox_test_util
+  )
+else()
+  message(STATUS "Skipping velox_dwio_arrow_parquet_writer_test (arrow_testing unavailable)")
+endif()

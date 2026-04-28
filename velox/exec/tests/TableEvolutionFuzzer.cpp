@@ -560,7 +560,10 @@ VectorPtr TableEvolutionFuzzer::liftToType(
         case TypeKind::BIGINT:
           return liftToPrimitiveType<int64_t>(*typed, type);
         default:
-          VELOX_UNREACHABLE();
+          VELOX_FAIL(
+              "Unsupported type lift from {} to {}",
+              input->type()->toString(),
+              type->toString());
       }
     }
     case TypeKind::SMALLINT: {
@@ -573,7 +576,10 @@ VectorPtr TableEvolutionFuzzer::liftToType(
         case TypeKind::BIGINT:
           return liftToPrimitiveType<int64_t>(*typed, type);
         default:
-          VELOX_UNREACHABLE();
+          VELOX_FAIL(
+              "Unsupported type lift from {} to {}",
+              input->type()->toString(),
+              type->toString());
       }
     }
     case TypeKind::INTEGER: {
@@ -584,7 +590,10 @@ VectorPtr TableEvolutionFuzzer::liftToType(
         case TypeKind::BIGINT:
           return liftToPrimitiveType<int64_t>(*typed, type);
         default:
-          VELOX_UNREACHABLE();
+          VELOX_FAIL(
+              "Unsupported type lift from {} to {}",
+              input->type()->toString(),
+              type->toString());
       }
     }
     case TypeKind::REAL: {
@@ -595,7 +604,10 @@ VectorPtr TableEvolutionFuzzer::liftToType(
         case TypeKind::DOUBLE:
           return liftToPrimitiveType<double>(*typed, type);
         default:
-          VELOX_UNREACHABLE();
+          VELOX_FAIL(
+              "Unsupported type lift from {} to {}",
+              input->type()->toString(),
+              type->toString());
       }
     }
     case TypeKind::ARRAY: {
@@ -634,9 +646,8 @@ VectorPtr TableEvolutionFuzzer::liftToType(
         if (i < children.size()) {
           children[i] = liftToType(children[i], childType);
         } else {
-          children.push_back(
-              BaseVector::createNullConstant(
-                  childType, row->size(), config_.pool));
+          children.push_back(BaseVector::createNullConstant(
+              childType, row->size(), config_.pool));
         }
       }
       return std::make_shared<RowVector>(

@@ -19,6 +19,18 @@
 namespace velox::exec::test {
 using namespace facebook::velox::common::testutil;
 
+namespace {
+
+std::string genericPath(const std::filesystem::path& path) {
+  return path.generic_string();
+}
+
+std::string genericPath(const std::string& path) {
+  return std::filesystem::path(path).generic_string();
+}
+
+} // namespace
+
 TableWriterTestBase::TestParam::TestParam(
     FileFormat fileFormat,
     TestMode testMode,
@@ -39,31 +51,32 @@ TableWriterTestBase::TestParam::TestParam(
 
 CompressionKind TableWriterTestBase::TestParam::compressionKind() const {
   return static_cast<facebook::velox::common::CompressionKind>(
-      (value & ((1L << 56) - 1)) >> 48);
+      (value & ((1LL << 56) - 1)) >> 48);
 }
 
 bool TableWriterTestBase::TestParam::multiDrivers() const {
-  return (value & (1L << 40)) != 0;
+  return (value & (1LL << 40)) != 0;
 }
 
 FileFormat TableWriterTestBase::TestParam::fileFormat() const {
-  return static_cast<FileFormat>((value & ((1L << 40) - 1)) >> 32);
+  return static_cast<FileFormat>((value & ((1LL << 40) - 1)) >> 32);
 }
 
 TableWriterTestBase::TestMode TableWriterTestBase::TestParam::testMode() const {
-  return static_cast<TestMode>((value & ((1L << 32) - 1)) >> 24);
+  return static_cast<TestMode>((value & ((1LL << 32) - 1)) >> 24);
 }
 
 CommitStrategy TableWriterTestBase::TestParam::commitStrategy() const {
-  return static_cast<CommitStrategy>((value & ((1L << 24) - 1)) >> 16);
+  return static_cast<CommitStrategy>((value & ((1LL << 24) - 1)) >> 16);
 }
 
 HiveBucketProperty::Kind TableWriterTestBase::TestParam::bucketKind() const {
-  return static_cast<HiveBucketProperty::Kind>((value & ((1L << 16) - 1)) >> 8);
+  return static_cast<HiveBucketProperty::Kind>(
+      (value & ((1LL << 16) - 1)) >> 8);
 }
 
 bool TableWriterTestBase::TestParam::bucketSort() const {
-  return (value & ((1L << 8) - 1)) != 0;
+  return (value & ((1LL << 8) - 1)) != 0;
 }
 
 bool TableWriterTestBase::TestParam::scaleWriter() const {
@@ -400,9 +413,8 @@ TableWriterTestBase::makeHiveConnectorSplits(const std::string& directoryPath) {
   std::vector<std::shared_ptr<connector::ConnectorSplit>> splits;
   for (auto& path : fs::recursive_directory_iterator(directoryPath)) {
     if (path.is_regular_file()) {
-      splits.push_back(
-          HiveConnectorTestBase::makeHiveConnectorSplits(
-              path.path().string(), 1, fileFormat_)[0]);
+      splits.push_back(HiveConnectorTestBase::makeHiveConnectorSplits(
+          path.path().string(), 1, fileFormat_)[0]);
     }
   }
   return splits;
@@ -415,7 +427,7 @@ std::vector<std::string> TableWriterTestBase::listAllFiles(
   std::vector<std::string> files;
   for (auto& path : fs::recursive_directory_iterator(directoryPath)) {
     if (path.is_regular_file()) {
-      files.push_back(path.path().filename());
+      files.push_back(path.path().filename().string());
     }
   }
   return files;
@@ -428,9 +440,8 @@ TableWriterTestBase::makeHiveConnectorSplits(
     const std::vector<std::filesystem::path>& filePaths) {
   std::vector<std::shared_ptr<connector::ConnectorSplit>> splits;
   for (const auto& filePath : filePaths) {
-    splits.push_back(
-        HiveConnectorTestBase::makeHiveConnectorSplits(
-            filePath.string(), 1, fileFormat_)[0]);
+    splits.push_back(HiveConnectorTestBase::makeHiveConnectorSplits(
+        filePath.string(), 1, fileFormat_)[0]);
   }
   return splits;
 }
@@ -488,7 +499,7 @@ std::set<std::string> TableWriterTestBase::getLeafSubdirectories(
   std::set<std::string> subdirectories;
   for (auto& path : fs::recursive_directory_iterator(directoryPath)) {
     if (path.is_regular_file()) {
-      subdirectories.emplace(path.path().parent_path().string());
+      subdirectories.emplace(genericPath(path.path().parent_path()));
     }
   }
   return subdirectories;
@@ -499,7 +510,7 @@ std::vector<std::string> TableWriterTestBase::getRecursiveFiles(
   std::vector<std::string> files;
   for (auto& path : fs::recursive_directory_iterator(directoryPath)) {
     if (path.is_regular_file()) {
-      files.push_back(path.path().string());
+      files.push_back(genericPath(path.path()));
     }
   }
   return files;
@@ -784,10 +795,9 @@ std::string TableWriterTestBase::partitionNameToPredicate(
   for (auto i = 0; i < partitionKeyValues.size(); ++i) {
     if (partitionTypes[i]->isVarchar() || partitionTypes[i]->isVarbinary() ||
         partitionTypes[i]->isDate()) {
-      conjuncts.push_back(
-          partitionKeyValues[i]
-              .replace(partitionKeyValues[i].find("="), 1, "='")
-              .append("'"));
+      conjuncts.push_back(partitionKeyValues[i]
+                              .replace(partitionKeyValues[i].find("="), 1, "='")
+                              .append("'"));
     } else {
       conjuncts.push_back(partitionKeyValues[i]);
     }
@@ -803,10 +813,9 @@ std::string TableWriterTestBase::partitionNameToPredicate(
   for (auto i = 0; i < partitionDirNames.size(); ++i) {
     if (partitionTypes_[i]->isVarchar() || partitionTypes_[i]->isVarbinary() ||
         partitionTypes_[i]->isDate()) {
-      conjuncts.push_back(
-          partitionKeyValues[i]
-              .replace(partitionKeyValues[i].find("="), 1, "='")
-              .append("'"));
+      conjuncts.push_back(partitionKeyValues[i]
+                              .replace(partitionKeyValues[i].find("="), 1, "='")
+                              .append("'"));
     } else {
       conjuncts.push_back(partitionDirNames[i]);
     }
@@ -817,24 +826,22 @@ std::string TableWriterTestBase::partitionNameToPredicate(
 void TableWriterTestBase::verifyUnbucketedFilePath(
     const std::filesystem::path& filePath,
     const std::string& targetDir) {
-  ASSERT_EQ(filePath.parent_path().string(), targetDir);
+  ASSERT_EQ(genericPath(filePath.parent_path()), genericPath(targetDir));
   if (commitStrategy_ == CommitStrategy::kNoCommit) {
-    ASSERT_TRUE(
-        RE2::FullMatch(
-            filePath.filename().string(),
-            fmt::format(
-                "test_cursor.+_[0-{}]_{}_.+",
-                numTableWriterCount_ - 1,
-                tableWriteNodeId_)))
+    ASSERT_TRUE(RE2::FullMatch(
+        filePath.filename().string(),
+        fmt::format(
+            "test_cursor.+_[0-{}]_{}_.+",
+            numTableWriterCount_ - 1,
+            tableWriteNodeId_)))
         << filePath.filename().string();
   } else {
-    ASSERT_TRUE(
-        RE2::FullMatch(
-            filePath.filename().string(),
-            fmt::format(
-                ".tmp.velox.test_cursor.+_[0-{}]_{}_.+",
-                numTableWriterCount_ - 1,
-                tableWriteNodeId_)))
+    ASSERT_TRUE(RE2::FullMatch(
+        filePath.filename().string(),
+        fmt::format(
+            ".tmp.velox.test_cursor.+_[0-{}]_{}_.+",
+            numTableWriterCount_ - 1,
+            tableWriteNodeId_)))
         << filePath.filename().string();
   }
 }
@@ -843,36 +850,32 @@ void TableWriterTestBase::verifyPartitionedFilePath(
     const std::filesystem::path& filePath,
     const std::string& targetDir) {
   verifyPartitionedDirPath(filePath.parent_path(), targetDir);
-  verifyUnbucketedFilePath(filePath, filePath.parent_path().string());
+  verifyUnbucketedFilePath(filePath, genericPath(filePath.parent_path()));
 }
 
 void TableWriterTestBase::verifyBucketedFileName(
     const std::filesystem::path& filePath) {
   if (commitStrategy_ == CommitStrategy::kNoCommit) {
     if (fileFormat_ == FileFormat::PARQUET) {
-      ASSERT_TRUE(
-          RE2::FullMatch(
-              filePath.filename().string(),
-              "0[0-9]+_0_TaskCursorQuery_[0-9]+\\.parquet$"))
+      ASSERT_TRUE(RE2::FullMatch(
+          filePath.filename().string(),
+          "0[0-9]+_0_TaskCursorQuery_[0-9]+\\.parquet$"))
           << filePath.filename().string();
     } else {
-      ASSERT_TRUE(
-          RE2::FullMatch(
-              filePath.filename().string(), "0[0-9]+_0_TaskCursorQuery_[0-9]+"))
+      ASSERT_TRUE(RE2::FullMatch(
+          filePath.filename().string(), "0[0-9]+_0_TaskCursorQuery_[0-9]+"))
           << filePath.filename().string();
     }
   } else {
     if (fileFormat_ == FileFormat::PARQUET) {
-      ASSERT_TRUE(
-          RE2::FullMatch(
-              filePath.filename().string(),
-              ".tmp.velox.0[0-9]+_0_TaskCursorQuery_[0-9]+_.+\\.parquet$"))
+      ASSERT_TRUE(RE2::FullMatch(
+          filePath.filename().string(),
+          ".tmp.velox.0[0-9]+_0_TaskCursorQuery_[0-9]+_.+\\.parquet$"))
           << filePath.filename().string();
     } else {
-      ASSERT_TRUE(
-          RE2::FullMatch(
-              filePath.filename().string(),
-              ".tmp.velox.0[0-9]+_0_TaskCursorQuery_[0-9]+_.+"))
+      ASSERT_TRUE(RE2::FullMatch(
+          filePath.filename().string(),
+          ".tmp.velox.0[0-9]+_0_TaskCursorQuery_[0-9]+_.+"))
           << filePath.filename().string();
     }
   }
@@ -888,11 +891,13 @@ void TableWriterTestBase::verifyBucketedFilePath(
 void TableWriterTestBase::verifyPartitionedDirPath(
     const std::filesystem::path& dirPath,
     const std::string& targetDir) {
-  std::string regex(targetDir);
+  // Windows directory iterators use native separators. Match generic paths so
+  // the same partition layout assertions work on all platforms.
+  std::string regex(RE2::QuoteMeta(genericPath(targetDir)));
   bool matched{false};
   for (int i = 0; i < partitionedBy_.size(); ++i) {
-    regex = fmt::format("{}/{}=.+", regex, partitionedBy_[i]);
-    if (RE2::FullMatch(dirPath.string(), regex)) {
+    regex = fmt::format("{}/{}=.+", regex, RE2::QuoteMeta(partitionedBy_[i]));
+    if (RE2::FullMatch(genericPath(dirPath), regex)) {
       matched = true;
       break;
     }
@@ -1028,7 +1033,7 @@ void TableWriterTestBase::verifyTableWriterOutput(
   } else if (testMode_ == TestMode::kOnlyBucketed) {
     ASSERT_EQ(dirPaths.size(), 0);
     for (const auto& filePath : filePaths) {
-      ASSERT_EQ(filePath.parent_path().string(), targetDir);
+      ASSERT_EQ(genericPath(filePath.parent_path()), genericPath(targetDir));
       verifyBucketedFileName(filePath);
       if (verifyBucketedData) {
         verifyBucketedFileData(filePath, bucketCheckFileType);
@@ -1044,7 +1049,7 @@ void TableWriterTestBase::verifyTableWriterOutput(
   int32_t numLeafDir{0};
   for (const auto& dirPath : dirPaths) {
     verifyPartitionedDirPath(dirPath, targetDir);
-    if (dirPath.parent_path().string() != targetDir) {
+    if (genericPath(dirPath.parent_path()) != genericPath(targetDir)) {
       ++numLeafDir;
     }
   }
@@ -1064,7 +1069,7 @@ void TableWriterTestBase::verifyTableWriterOutput(
   std::unordered_map<std::string, std::vector<std::filesystem::path>>
       bucketFilesPerPartition;
   for (const auto& filePath : filePaths) {
-    bucketFilesPerPartition[filePath.parent_path().string()].push_back(
+    bucketFilesPerPartition[genericPath(filePath.parent_path())].push_back(
         filePath);
     verifyBucketedFilePath(filePath, targetDir);
     if (verifyBucketedData) {

@@ -12,12 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+if(MSVC)
+  set(PROCESS_TEST_SOURCES
+    ThreadLocalRegistryTest.cpp
+    TraceContextTest.cpp
+    TraceHistoryTest.cpp
+  )
+else()
+  set(PROCESS_TEST_SOURCES
+    ProfilerTest.cpp
+    ThreadLocalRegistryTest.cpp
+    TraceContextTest.cpp
+    TraceHistoryTest.cpp
+  )
+endif()
+
 add_executable(
   velox_process_test
-  ProfilerTest.cpp
-  ThreadLocalRegistryTest.cpp
-  TraceContextTest.cpp
-  TraceHistoryTest.cpp
+  ${PROCESS_TEST_SOURCES}
 )
 
 add_test(velox_process_test velox_process_test)

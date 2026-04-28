@@ -182,7 +182,12 @@ TEST(FbHive, parseOpaque) {
   registerOpaqueType<Foo>("bar");
   HiveTypeParser parser;
   auto t = parser.parse("opaque<bar>");
+#ifdef _MSC_VER
+  // MSVC typeid().name() prepends "struct " to struct type names.
+  ASSERT_EQ(t->toString(), "OPAQUE<struct facebook::velox::type::fbhive::Foo>");
+#else
   ASSERT_EQ(t->toString(), "OPAQUE<facebook::velox::type::fbhive::Foo>");
+#endif
   unregisterOpaqueType<Foo>("bar");
 }
 

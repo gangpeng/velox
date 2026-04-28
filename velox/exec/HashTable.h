@@ -131,7 +131,7 @@ class BaseHashTable {
   static constexpr double kHashTableLoadFactor = 0.7;
 
   /// 2M entries, i.e. 16MB is the largest array based hash table.
-  static constexpr uint64_t kArrayHashMaxSize = 2L << 20;
+  static constexpr uint64_t kArrayHashMaxSize = 2LL << 20;
 
   /// Specifies the hash mode of a table.
   enum class HashMode { kHash, kArray, kNormalizedKey };

@@ -15,6 +15,12 @@
  */
 #include "velox/vector/VectorSaver.h"
 #include <fstream>
+#ifdef _WIN32
+#include <atomic>
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 #include "velox/vector/ComplexVector.h"
 #include "velox/vector/FlatVector.h"
 #include "velox/vector/LazyVector.h"
@@ -800,11 +806,22 @@ std::optional<std::string> generateFolderPath(
     const char* basePath,
     const char* prefix) {
   auto path = fmt::format("{}/velox_{}_XXXXXX", basePath, prefix);
+#ifdef _WIN32
+  // Windows does not have mkdtemp; use GetTempPath + CreateDirectory.
+  // Replace the XXXXXX suffix with a unique number.
+  static std::atomic<uint32_t> counter{0};
+  auto uniquePath = fmt::format("{}/velox_{}_{:06}", basePath, prefix, ++counter);
+  if (!CreateDirectoryA(uniquePath.c_str(), nullptr)) {
+    return std::nullopt;
+  }
+  return uniquePath;
+#else
   auto createdPath = mkdtemp(path.data());
   if (createdPath == nullptr) {
     return std::nullopt;
   }
   return path;
+#endif
 }
 
 void saveSelectivityVector(const SelectivityVector& rows, std::ostream& out) {

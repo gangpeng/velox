@@ -17,6 +17,12 @@
 #include "folly/executors/CPUThreadPoolExecutor.h"
 #include "velox/common/base/tests/GTestUtils.h"
 #include "velox/common/encode/Coding.h"
+
+#ifdef _WIN32
+#include <time.h>
+#include <folly/portability/Time.h>
+#endif
+
 #include "velox/dwio/common/exception/Exceptions.h"
 #include "velox/dwio/dwrf/common/wrap/dwrf-proto-wrapper.h"
 #include "velox/dwio/dwrf/reader/ColumnReader.h"
@@ -3891,10 +3897,21 @@ TEST_P(TestColumnReader, testTimestamp) {
   for (size_t i = 0; i < batch->size(); ++i) {
     time_t time = static_cast<time_t>(tsBatch->valueAt(i).getSeconds());
     tm timeStruct;
+#ifdef _WIN32
+    // Windows gmtime_s only supports dates from 1970 to ~3000, so skip
+    // the string comparison for pre-1970 timestamps and just verify nanos.
+    auto* result = gmtime_r(&time, &timeStruct);
+    if (result != nullptr) {
+      char buffer[30];
+      asctime_r(&timeStruct, buffer);
+      EXPECT_STREQ(expected[i], buffer) << "Wrong value at " << i;
+    }
+#else
     ASSERT_PRED1(isNotNull, gmtime_r(&time, &timeStruct));
     char buffer[30];
     asctime_r(&timeStruct, buffer);
     EXPECT_STREQ(expected[i], buffer) << "Wrong value at " << i;
+#endif
     EXPECT_EQ(expectedNano[i], tsBatch->valueAt(i).getNanos());
   }
 }
@@ -4049,12 +4066,12 @@ TEST_P(TestColumnReader, testDecimal128WithSkip) {
   ASSERT_EQ(0, getNullCount(intBatch));
   ASSERT_EQ(6, batch->size());
   ASSERT_EQ(6, intBatch->size());
-  ASSERT_EQ(493827160549382716, (long)intBatch->valueAt(0));
-  ASSERT_EQ(4938271605493827, (long)intBatch->valueAt(1));
-  ASSERT_EQ(49382716054938, (long)intBatch->valueAt(2));
-  ASSERT_EQ(493827160549, (long)intBatch->valueAt(3));
-  ASSERT_EQ(4938271605, (long)intBatch->valueAt(4));
-  ASSERT_EQ(49382716, (long)intBatch->valueAt(5));
+  ASSERT_EQ(493827160549382716, (int64_t)intBatch->valueAt(0));
+  ASSERT_EQ(4938271605493827, (int64_t)intBatch->valueAt(1));
+  ASSERT_EQ(49382716054938, (int64_t)intBatch->valueAt(2));
+  ASSERT_EQ(493827160549, (int64_t)intBatch->valueAt(3));
+  ASSERT_EQ(4938271605, (int64_t)intBatch->valueAt(4));
+  ASSERT_EQ(49382716, (int64_t)intBatch->valueAt(5));
   skip(2);
   next(5, batch);
   intBatch = getOnlyChild<FlatVector<int128_t>>(batch);
@@ -4062,7 +4079,7 @@ TEST_P(TestColumnReader, testDecimal128WithSkip) {
   ASSERT_EQ(5, intBatch->size());
   ASSERT_EQ(0, getNullCount(batch));
   ASSERT_EQ(0, getNullCount(intBatch));
-  ASSERT_EQ(49, (long)intBatch->valueAt(0));
+  ASSERT_EQ(49, (int64_t)intBatch->valueAt(0));
   ASSERT_EQ(
       "1.7320508075688772935274463415058723669",
       DecimalUtil::toString(intBatch->valueAt(1), decimalType));

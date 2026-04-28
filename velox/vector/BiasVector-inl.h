@@ -100,15 +100,25 @@ std::unique_ptr<SimpleVector<uint64_t>> BiasVector<T>::hashAll() const {
 template <typename T>
 typename SimpleVector<T>::TValueAt BiasVector<T>::valueAtFast(
     vector_size_t idx) const {
-  switch (valueType_) {
-    case TypeKind::INTEGER:
-      return bias_ + reinterpret_cast<const int32_t*>(rawValues_)[idx];
-    case TypeKind::SMALLINT:
-      return bias_ + reinterpret_cast<const int16_t*>(rawValues_)[idx];
-    case TypeKind::TINYINT:
-      return bias_ + reinterpret_cast<const int8_t*>(rawValues_)[idx];
-    default:
-      VELOX_UNSUPPORTED("Invalid type");
+  if constexpr (std::is_arithmetic_v<T> || std::is_same_v<T, int128_t>) {
+    switch (valueType_) {
+      case TypeKind::INTEGER:
+        return bias_ +
+            static_cast<T>(
+                reinterpret_cast<const int32_t*>(rawValues_)[idx]);
+      case TypeKind::SMALLINT:
+        return bias_ +
+            static_cast<T>(
+                reinterpret_cast<const int16_t*>(rawValues_)[idx]);
+      case TypeKind::TINYINT:
+        return bias_ +
+            static_cast<T>(
+                reinterpret_cast<const int8_t*>(rawValues_)[idx]);
+      default:
+        VELOX_UNSUPPORTED("Invalid type");
+    }
+  } else {
+    VELOX_UNSUPPORTED("BiasVector does not support non-arithmetic types");
   }
 }
 

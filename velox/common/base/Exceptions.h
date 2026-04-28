@@ -318,7 +318,12 @@ struct VeloxCheckFailStringType<std::string> {
 #define _VELOX_THROW(exception, ...) \
   _VELOX_THROW_IMPL(exception, "", ##__VA_ARGS__)
 
+// MSVC does not support explicit instantiation of [[noreturn]] function
+// templates (C2893). On MSVC we omit the extern declarations and let each
+// translation unit instantiate the templates on demand.
+#ifndef _MSC_VER
 DECLARE_CHECK_FAIL_TEMPLATES(::facebook::velox::VeloxRuntimeError)
+#endif
 
 #define _VELOX_CHECK_IMPL(expr, exprStr, ...)                       \
   _VELOX_CHECK_AND_THROW_IMPL(                                      \
@@ -503,7 +508,9 @@ DECLARE_CHECK_FAIL_TEMPLATES(::facebook::velox::VeloxRuntimeError)
       /* isRetriable */ true,                                       \
       ##__VA_ARGS__)
 
+#ifndef _MSC_VER
 DECLARE_CHECK_FAIL_TEMPLATES(::facebook::velox::VeloxUserError)
+#endif
 
 // For all below macros, an additional message can be passed using a
 // format string and arguments, as with `fmt::format`.

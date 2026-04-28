@@ -44,7 +44,9 @@ block()
   set(BUILD_SHARED_LIBS OFF)
   set(BUILD_TESTING OFF)
   set(CMAKE_BUILD_TYPE Release)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-nonnull ")
+  if(NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-nonnull ")
+  endif()
   # This option defaults to on and adds warning flags that fail the build.
   set(GEOS_BUILD_DEVELOPER OFF)
 

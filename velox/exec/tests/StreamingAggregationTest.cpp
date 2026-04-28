@@ -54,10 +54,12 @@ class StreamingAggregationTest
     return GetParam().preferredOutputBatchBytes;
   }
 
-  AssertQueryBuilder& config(
+  AssertQueryBuilder config(
       AssertQueryBuilder builder,
       uint32_t outputBatchSize) {
-    return builder
+    // Return the builder by value. Returning a reference would dangle because
+    // this helper receives the builder by value.
+    builder
         .config(
             core::QueryConfig::kPreferredOutputBatchRows,
             std::to_string(outputBatchSize))
@@ -67,6 +69,7 @@ class StreamingAggregationTest
         .config(
             core::QueryConfig::kPreferredOutputBatchBytes,
             std::to_string(preferredOutputBatchBytes()));
+    return builder;
   }
 
   void testAggregation(
@@ -174,9 +177,8 @@ class StreamingAggregationTest
     core::PlanNodeId aggregationNodeId;
     auto plan = PlanBuilder(planNodeIdGenerator)
                     .startTableScan()
-                    .outputType(
-                        std::dynamic_pointer_cast<const RowType>(
-                            inputVectors[0]->type()))
+                    .outputType(std::dynamic_pointer_cast<const RowType>(
+                        inputVectors[0]->type()))
                     .endTableScan()
                     .streamingAggregation(
                         {"c0"},
@@ -284,9 +286,8 @@ class StreamingAggregationTest
       core::PlanNodeId aggregationNodeId;
       auto plan = PlanBuilder(planNodeIdGenerator)
                       .startTableScan()
-                      .outputType(
-                          std::dynamic_pointer_cast<const RowType>(
-                              inputVectors[0]->type()))
+                      .outputType(std::dynamic_pointer_cast<const RowType>(
+                          inputVectors[0]->type()))
                       .endTableScan()
                       .streamingAggregation(
                           {"c0"},
@@ -345,9 +346,8 @@ class StreamingAggregationTest
       auto plan =
           PlanBuilder(planNodeIdGenerator)
               .startTableScan()
-              .outputType(
-                  std::dynamic_pointer_cast<const RowType>(
-                      inputVectors[0]->type()))
+              .outputType(std::dynamic_pointer_cast<const RowType>(
+                  inputVectors[0]->type()))
               .endTableScan()
               .streamingAggregation(
                   {"c0"}, {}, {}, core::AggregationNode::Step::kSingle, false)
@@ -552,9 +552,8 @@ class StreamingAggregationTest
       auto plan =
           PlanBuilder(planNodeIdGenerator)
               .startTableScan()
-              .outputType(
-                  std::dynamic_pointer_cast<const RowType>(
-                      inputVectors[0]->type()))
+              .outputType(std::dynamic_pointer_cast<const RowType>(
+                  inputVectors[0]->type()))
               .endTableScan()
               .streamingAggregation(
                   keys[0]->type()->asRow().names(),
@@ -614,9 +613,8 @@ class StreamingAggregationTest
       core::PlanNodeId aggregationNodeId;
       auto plan = PlanBuilder(planNodeIdGenerator)
                       .startTableScan()
-                      .outputType(
-                          std::dynamic_pointer_cast<const RowType>(
-                              inputVectors[0]->type()))
+                      .outputType(std::dynamic_pointer_cast<const RowType>(
+                          inputVectors[0]->type()))
                       .endTableScan()
                       .streamingAggregation(
                           keys[0]->type()->asRow().names(),
@@ -1141,17 +1139,16 @@ TEST_P(StreamingAggregationTest, clusteredInputWithBarrier) {
 
   auto planNodeIdGenerator = std::make_shared<core::PlanNodeIdGenerator>();
   core::PlanNodeId streamingAggregationNodeId;
-  auto plan =
-      PlanBuilder(planNodeIdGenerator)
-          .startTableScan()
-          .outputType(
-              std::dynamic_pointer_cast<const RowType>(inputVectors[0]->type()))
-          .endTableScan()
-          .partialStreamingAggregation(
-              {"c0"}, {"count(c1)", "arbitrary(c1)", "array_agg(c1)"})
-          .capturePlanNodeId(streamingAggregationNodeId)
-          .finalAggregation()
-          .planNode();
+  auto plan = PlanBuilder(planNodeIdGenerator)
+                  .startTableScan()
+                  .outputType(std::dynamic_pointer_cast<const RowType>(
+                      inputVectors[0]->type()))
+                  .endTableScan()
+                  .partialStreamingAggregation(
+                      {"c0"}, {"count(c1)", "arbitrary(c1)", "array_agg(c1)"})
+                  .capturePlanNodeId(streamingAggregationNodeId)
+                  .finalAggregation()
+                  .planNode();
   const auto expected = makeRowVector(
       {makeNullableFlatVector<int32_t>(
            {1, 2, std::nullopt, 3, 4, 9, 10, 11, 12, 17, 18, 19}),

@@ -17,6 +17,8 @@ add_executable(velox_spark_types_test TimestampNTZCastTest.cpp TimestampNTZTypeT
 target_link_libraries(
   velox_spark_types_test
   velox_spark_types
+  velox_functions_spark
   velox_vector_test_lib
+  velox_functions_test_lib
   GTest::gtest_main
 )

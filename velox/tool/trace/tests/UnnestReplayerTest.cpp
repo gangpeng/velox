@@ -142,7 +142,7 @@ TEST_F(UnnestReplayerTest, test) {
   traceBuilder.maxDrivers(4)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, unnestId_);
   auto traceResult =

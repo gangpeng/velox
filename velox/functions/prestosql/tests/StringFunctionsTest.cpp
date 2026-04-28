@@ -1720,11 +1720,11 @@ TEST_F(StringFunctionsTest, replace) {
 }
 
 TEST_F(StringFunctionsTest, replaceWithReusableInput) {
-  auto c0 = ({
+  auto c0 = [&]() {
     auto values = makeFlatVector<std::string>({"foo"});
     auto indices = allocateIndices(100, execCtx_.pool());
-    wrapInDictionary(indices, 100, values);
-  });
+    return wrapInDictionary(indices, 100, values);
+  }();
   auto c1 =
       makeFlatVector<int64_t>(100, [](vector_size_t) { return 2033475965; });
   auto c2 = makeFlatVector<int64_t>(

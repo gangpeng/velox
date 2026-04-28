@@ -353,7 +353,7 @@ TEST_F(DecompressionTest, testLzoSmall) {
 TEST_F(DecompressionTest, testLzoLong) {
   // set up a framed lzo buffer with 100,000 'a'
   unsigned char buffer[482];
-  bzero(buffer, std::size(buffer));
+  memset(buffer, 0, std::size(buffer));
   // header
   buffer[0] = 190;
   buffer[1] = 3;

@@ -28,6 +28,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <typeindex>
@@ -68,6 +69,13 @@ constexpr column_index_t kConstantChannel =
 ///     information into template parameters.
 
 /// Simple enum with type category.
+// Undefine Windows macros that conflict with enum value names.
+#ifdef OPAQUE
+#undef OPAQUE
+#endif
+#ifdef DOUBLE
+#undef DOUBLE
+#endif
 enum class TypeKind : int8_t {
   BOOLEAN = 0,
   TINYINT = 1,
@@ -1400,10 +1408,10 @@ using TimestampType = ScalarType<TypeKind::TIMESTAMP>;
 using VarcharType = ScalarType<TypeKind::VARCHAR>;
 using VarbinaryType = ScalarType<TypeKind::VARBINARY>;
 
-constexpr long kMillisInSecond = 1000;
-constexpr long kMillisInMinute = 60 * kMillisInSecond;
-constexpr long kMillisInHour = 60 * kMillisInMinute;
-constexpr long kMillisInDay = 24 * kMillisInHour;
+constexpr int64_t kMillisInSecond = 1000;
+constexpr int64_t kMillisInMinute = 60 * kMillisInSecond;
+constexpr int64_t kMillisInHour = 60 * kMillisInMinute;
+constexpr int64_t kMillisInDay = 24 * kMillisInHour;
 
 /// Time interval in milliseconds.
 class IntervalDayTimeType final : public BigintType {
@@ -1803,6 +1811,14 @@ MapTypePtr MAP(TypePtr keyType, TypePtr valueType);
 /// Example: ROW({"a", "b", "c"}, {INTEGER(), BIGINT(), VARCHAR()}).
 RowTypePtr ROW(std::vector<std::string> names, std::vector<TypePtr> types);
 
+#ifdef _MSC_VER
+/// MSVC overload: brace-init with mixed TypePtr-derived types cannot deduce
+/// std::vector<TypePtr> when elements have different concrete types.
+RowTypePtr ROW(
+    std::initializer_list<std::string> names,
+    std::initializer_list<TypePtr> types);
+#endif
+
 /// Returns a homogenous struct where all fields have the same type.
 ///
 /// Example:
@@ -1826,15 +1842,15 @@ RowTypePtr ROW(
 /// Example: ROW("a", BIGINT()) is a shortcut for ROW({{"a", BIGINT()}}).
 RowTypePtr ROW(std::string name, TypePtr type);
 
-/// Returns anonymoous struct where field names are empty.
+/// Returns anonymous struct where field names are empty.
 ///
 /// Examples:
 ///    ROW({INTEGER(), BIGINT(), VARCHAR()})
 ///    ROW({}) // Struct with no fields.
-RowTypePtr ROW(std::vector<TypePtr>&& types);
+RowTypePtr ROW(std::vector<TypePtr> types);
 
 std::shared_ptr<const FunctionType> FUNCTION(
-    std::vector<TypePtr>&& argumentTypes,
+    std::vector<TypePtr> argumentTypes,
     TypePtr returnType);
 
 template <typename Class>
@@ -2208,7 +2224,18 @@ std::shared_ptr<const OpaqueType> OPAQUE() {
 // todo: union convenience creators
 
 VELOX_SCALAR_ACCESSOR(INTEGER);
+#ifdef _MSC_VER
+// Windows winnt.h defines `typedef BYTE BOOLEAN` which causes C2872
+// "ambiguous symbol" when Velox's BOOLEAN() function is brought into scope
+// via `using namespace facebook::velox`. Work around by declaring the
+// function under an alternate name and redirecting via a function-like macro.
+// NOTE: All qualified calls (velox::BOOLEAN()) must use
+// ScalarType<TypeKind::BOOLEAN>::create() directly instead.
+std::shared_ptr<const ScalarType<TypeKind::BOOLEAN>> BOOLEAN_();
+#define BOOLEAN() ::facebook::velox::BOOLEAN_()
+#else
 VELOX_SCALAR_ACCESSOR(BOOLEAN);
+#endif
 VELOX_SCALAR_ACCESSOR(TINYINT);
 VELOX_SCALAR_ACCESSOR(SMALLINT);
 VELOX_SCALAR_ACCESSOR(BIGINT);
@@ -2331,7 +2358,28 @@ inline std::string to(const Timestamp& value) {
 
 template <>
 inline std::string to(const int128_t& value) {
+#ifdef _MSC_VER
+  // On MSVC, int128_t = absl::int128 which is not a standard integer type;
+  // std::to_string(absl::int128) is not defined. Use stream output instead.
+  std::ostringstream oss;
+  oss << value;
+  return oss.str();
+#else
   return std::to_string(value);
+#endif
+}
+
+template <>
+inline std::string to(const uint128_t& value) {
+#ifdef _MSC_VER
+  // On MSVC, uint128_t = absl::uint128. Use stream output for conversion.
+  std::ostringstream oss;
+  oss << value;
+  return oss.str();
+#else
+  // On GCC, uint128_t = __uint128_t (standard extension) supports to_string.
+  return std::to_string(value);
+#endif
 }
 
 template <typename T>

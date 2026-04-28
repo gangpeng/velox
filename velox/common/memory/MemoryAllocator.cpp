@@ -16,13 +16,15 @@
 
 #include "velox/common/memory/MemoryAllocator.h"
 
-#include <sys/mman.h>
+#ifndef _WIN32
 #include <sys/resource.h>
+#endif
 #include <iostream>
 #include <numeric>
 
 #include "velox/common/base/BitUtil.h"
 #include "velox/common/memory/Memory.h"
+#include "velox/common/memory/SystemMemory.h"
 
 DECLARE_bool(velox_memory_use_hugepages);
 
@@ -416,7 +418,6 @@ std::string Stats::toString() const {
 void MemoryAllocator::useHugePages(
     const ContiguousAllocation& data,
     bool enable) {
-#ifdef linux
   if (!FLAGS_velox_memory_use_hugepages) {
     return;
   }
@@ -424,15 +425,11 @@ void MemoryAllocator::useHugePages(
   if (!maybeRange.has_value()) {
     return;
   }
-  auto rc = ::madvise(
-      maybeRange.value().data(),
-      maybeRange.value().size(),
-      enable ? MADV_HUGEPAGE : MADV_NOHUGEPAGE);
-  if (rc != 0) {
-    VELOX_MEM_LOG(WARNING) << "madvise hugepage errno="
-                           << folly ::errnoStr(errno);
+  if (!systemMadviseHugePage(
+          maybeRange.value().data(), maybeRange.value().size(), enable)) {
+    VELOX_MEM_LOG(WARNING) << "madvise hugepage error="
+                           << systemMemoryError();
   }
-#endif
 }
 
 void MemoryAllocator::setAllocatorFailureMessage(std::string message) {
@@ -453,6 +450,7 @@ std::string MemoryAllocator::getAndClearFailureMessage() {
 }
 
 namespace {
+#ifndef _WIN32
 struct TraceState {
   struct rusage rusage;
   Stats allocatorStats;
@@ -467,8 +465,10 @@ int64_t toUsec(struct timeval tv) {
 int32_t elapsedUsec(struct timeval end, struct timeval begin) {
   return toUsec(end) - toUsec(begin);
 }
+#endif // !_WIN32
 } // namespace
 
+#ifndef _WIN32
 void MemoryAllocator::getTracingHooks(
     std::function<void()>& init,
     std::function<std::string()>& report,
@@ -511,5 +511,15 @@ void MemoryAllocator::getTracingHooks(
     return out.str();
   };
 }
+#else
+void MemoryAllocator::getTracingHooks(
+    std::function<void()>& init,
+    std::function<std::string()>& report,
+    std::function<int64_t()> /*ioVolume*/) {
+  // Tracing hooks using getrusage/gettimeofday are not supported on Windows.
+  init = []() {};
+  report = []() -> std::string { return {}; };
+}
+#endif
 
 } // namespace facebook::velox::memory

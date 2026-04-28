@@ -210,7 +210,7 @@ static std::string getFilesWithPrefix(
   }
   for (const auto& entry : std::filesystem::directory_iterator(dirPath)) {
     if (entry.is_regular_file()) {
-      std::string filename = entry.path().filename();
+      std::string filename = entry.path().filename().string();
       if (filename.find(prefix) == 0) {
         if (++numFilesFound > 1) {
           ss << ",";

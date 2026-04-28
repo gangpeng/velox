@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstdint>
+#include "velox/common/base/Portability.h"
 
 namespace facebook::velox::dwio::common {
 

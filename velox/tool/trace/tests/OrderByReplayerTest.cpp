@@ -134,7 +134,7 @@ TEST_F(OrderByReplayerTest, basic) {
   traceBuilder.maxDrivers(4)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, orderById_);
   auto traceResult =
@@ -174,7 +174,7 @@ TEST_F(OrderByReplayerTest, partial) {
   traceBuilder.maxDrivers(4)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, orderById_);
   auto traceResult =

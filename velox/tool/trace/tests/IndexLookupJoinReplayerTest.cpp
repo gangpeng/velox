@@ -285,7 +285,7 @@ TEST_F(IndexLookupJoinReplayerTest, test) {
       AssertQueryBuilder(plan)
           .config(core::QueryConfig::kQueryTraceEnabled, true)
           .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-          .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+          .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
           .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
           .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_)
           .splits(

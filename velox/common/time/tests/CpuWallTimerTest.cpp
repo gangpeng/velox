@@ -16,6 +16,7 @@
 
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+#include <folly/Benchmark.h>
 #include <thread>
 
 #include "velox/common/time/CpuWallTimer.h"
@@ -26,19 +27,28 @@ namespace facebook::velox::test {
 
 class CpuWallTimerTest : public testing::Test {
  protected:
+  static void burnCpuUntilThreadClockAdvances() {
+    const auto start = process::threadCpuNanos();
+    uint64_t n{0};
+    const auto deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(1);
+    while (process::threadCpuNanos() == start &&
+           std::chrono::steady_clock::now() < deadline) {
+      // Windows reports thread CPU time in coarse ticks. Burn CPU until the
+      // platform clock observes this thread so the timer assertions are real
+      // on all supported platforms.
+      for (size_t i = 0; i < 100'000; ++i) {
+        n += (i + 1) * 17;
+        n ^= n >> 7;
+      }
+      folly::doNotOptimizeAway(n);
+    }
+  }
+
   static void workAndSleep(std::chrono::nanoseconds sleepDuration) {
     // Use some cpu here.
-    size_t n{0};
-    for (size_t i = 0; i < 10'000; ++i) {
-      n += 5 + i * 10;
-    }
-
-    // Condition to use variable 'n' otherwise the compiler might opt out the
-    // computation loop above since 'n' is not used.
-    if (n >= 5) {
-      /* sleep override */
-      std::this_thread::sleep_for(sleepDuration);
-    }
+    burnCpuUntilThreadClockAdvances();
+    std::this_thread::sleep_for(sleepDuration);
   }
 };
 

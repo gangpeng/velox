@@ -103,11 +103,11 @@ class QuantileDigest {
   /// right-continous step function, i.e., values in between entries
   /// have the same estimated cumulative probability as the
   /// previous entry.
-  const std::vector<
-      CdfEntry,
-      typename std::allocator_traits<Allocator>::template rebind_alloc<
-          CdfEntry>>
-  getDistributionFunction(T rangeStart, T rangeEnd) const;
+  auto getDistributionFunction(T rangeStart, T rangeEnd) const
+      -> const std::vector<
+          CdfEntry,
+          typename std::allocator_traits<Allocator>::template rebind_alloc<
+              CdfEntry>>;
 
   struct ValueCountPair {
     T value;
@@ -123,12 +123,11 @@ class QuantileDigest {
   /// Example: For data [1, 10, 11, 12, 100] with bounds [0.25, 0.75], this
   /// returns the values and counts for the middle quantile range,
   /// excluding the outliers (1, 100).
-  std::vector<
-      ValueCountPair,
-      typename std::allocator_traits<Allocator>::template rebind_alloc<
-          ValueCountPair>>
-  getValuesInQuantileRange(double lowerQuantileBound, double upperQuantileBound)
-      const;
+  auto getValuesInQuantileRange(double lowerQuantileBound, double upperQuantileBound) const
+      -> std::vector<
+          ValueCountPair,
+          typename std::allocator_traits<Allocator>::template rebind_alloc<
+              ValueCountPair>>;
 
  private:
   using U = std::conditional_t<sizeof(T) == sizeof(int64_t), int64_t, int32_t>;
@@ -494,13 +493,13 @@ int32_t QuantileDigest<T, Allocator>::calculateHeight(int32_t nodeCount) {
   if constexpr (std::is_same_v<U, int64_t>) {
     height = static_cast<int32_t>(64 - count_leading_zeros(min_ ^ max_) + 1);
     VELOX_CHECK(
-        height >= 64 || static_cast<int64_t>(nodeCount) <= (1L << height) - 1L,
+        height >= 64 || static_cast<int64_t>(nodeCount) <= (1LL << height) - 1L,
         "Too many nodes in deserialized tree. Possible corruption");
   } else {
     height =
         static_cast<int32_t>(32 - count_leading_zeros_32bits(min_ ^ max_) + 1);
     VELOX_CHECK(
-        height >= 32 || static_cast<int64_t>(nodeCount) <= (1L << height) - 1L,
+        height >= 32 || static_cast<int64_t>(nodeCount) <= (1LL << height) - 1L,
         "Too many nodes in deserialized tree. Possible corruption");
   }
   return height;
@@ -1339,12 +1338,13 @@ std::optional<double> QuantileDigest<T, Allocator>::quantileAtValue(
 }
 
 template <typename T, typename Allocator>
-const std::vector<
-    typename QuantileDigest<T, Allocator>::CdfEntry,
-    typename QuantileDigest<T, Allocator>::template RebindAlloc<
-        typename QuantileDigest<T, Allocator>::CdfEntry>>
-QuantileDigest<T, Allocator>::getDistributionFunction(T rangeStart, T rangeEnd)
-    const {
+auto QuantileDigest<T, Allocator>::getDistributionFunction(
+    T rangeStart,
+    T rangeEnd) const
+    -> const std::vector<
+        CdfEntry,
+        typename std::allocator_traits<Allocator>::template rebind_alloc<
+            CdfEntry>> {
   std::vector<CdfEntry, RebindAlloc<CdfEntry>> cdf(
       RebindAlloc<CdfEntry>(counts_.get_allocator()));
 
@@ -1388,13 +1388,13 @@ QuantileDigest<T, Allocator>::getDistributionFunction(T rangeStart, T rangeEnd)
 }
 
 template <typename T, typename Allocator>
-std::vector<
-    typename QuantileDigest<T, Allocator>::ValueCountPair,
-    typename QuantileDigest<T, Allocator>::template RebindAlloc<
-        typename QuantileDigest<T, Allocator>::ValueCountPair>>
-QuantileDigest<T, Allocator>::getValuesInQuantileRange(
+auto QuantileDigest<T, Allocator>::getValuesInQuantileRange(
     double lowerQuantileBound,
-    double upperQuantileBound) const {
+    double upperQuantileBound) const
+    -> std::vector<
+        ValueCountPair,
+        typename std::allocator_traits<Allocator>::template rebind_alloc<
+            ValueCountPair>> {
   std::vector<ValueCountPair, RebindAlloc<ValueCountPair>> result(
       RebindAlloc<ValueCountPair>(counts_.get_allocator()));
 

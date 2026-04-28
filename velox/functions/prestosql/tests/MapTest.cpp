@@ -474,7 +474,7 @@ TEST_F(MapTest, outOfOrder) {
       makeMapVector<int64_t, int32_t>(size, sizeAt, keyAt, valueAt);
 
   auto result = evaluate(
-      "map(if(c0 \% 2 = 1, c1, c2), if(c0 \% 3 = 0, c3, c4))",
+      "map(if(c0 % 2 = 1, c1, c2), if(c0 % 3 = 0, c3, c4))",
       makeRowVector({intVector, keys1, keys2, values1, values2}));
   assertEqualVectors(expectedMap, result);
 }

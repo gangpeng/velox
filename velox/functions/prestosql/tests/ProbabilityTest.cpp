@@ -138,6 +138,9 @@ class ProbabilityTest : public functions::test::FunctionBaseTest {
 };
 
 TEST_F(ProbabilityTest, betaCDF) {
+#ifdef _MSC_VER
+  GTEST_SKIP() << "MSVC long double precision insufficient for boost::math";
+#endif
   const auto betaCDF = [&](std::optional<double> a,
                            std::optional<double> b,
                            std::optional<double> value) {
@@ -236,6 +239,9 @@ TEST_F(ProbabilityTest, cauchyCDF) {
 }
 
 TEST_F(ProbabilityTest, invBetaCDF) {
+#ifdef _MSC_VER
+  GTEST_SKIP() << "MSVC long double precision insufficient for boost::math";
+#endif
   const auto invBetaCDF = [&](std::optional<double> a,
                               std::optional<double> b,
                               std::optional<double> p) {
@@ -275,6 +281,9 @@ TEST_F(ProbabilityTest, invBetaCDF) {
 }
 
 TEST_F(ProbabilityTest, chiSquaredCDF) {
+#ifdef _MSC_VER
+  GTEST_SKIP() << "MSVC long double precision insufficient for boost::math";
+#endif
   const auto chiSquaredCDF = [&](std::optional<double> df,
                                  std::optional<double> value) {
     return evaluateOnce<double>("chi_squared_cdf(c0, c1)", df, value);
@@ -290,6 +299,9 @@ TEST_F(ProbabilityTest, chiSquaredCDF) {
 }
 
 TEST_F(ProbabilityTest, fCDF) {
+#ifdef _MSC_VER
+  GTEST_SKIP() << "MSVC long double precision insufficient for boost::math";
+#endif
   const auto fCDF = [&](std::optional<double> df1,
                         std::optional<double> df2,
                         std::optional<double> value) {
@@ -403,10 +415,16 @@ TEST_F(ProbabilityTest, gammaCDF) {
 }
 
 TEST_F(ProbabilityTest, poissonCDF) {
+#ifdef _MSC_VER
+  GTEST_SKIP() << "MSVC long double precision insufficient for boost::math";
+#endif
   poissonCDFTests<int32_t>();
 }
 
 TEST_F(ProbabilityTest, binomialCDF) {
+#ifdef _MSC_VER
+  GTEST_SKIP() << "MSVC long double precision insufficient for boost::math";
+#endif
   binomialCDFTests<int32_t>();
   binomialCDFTests<int64_t>();
 }
@@ -459,6 +477,9 @@ TEST_F(ProbabilityTest, weibullCDF) {
 }
 
 TEST_F(ProbabilityTest, inverseNormalCDF) {
+#ifdef _MSC_VER
+  GTEST_SKIP() << "MSVC long double precision insufficient for boost::math";
+#endif
   const auto inverseNormalCDF = [&](std::optional<double> mean,
                                     std::optional<double> sd,
                                     std::optional<double> p) {

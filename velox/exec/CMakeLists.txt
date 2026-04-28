@@ -11,6 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# SpillStats is in its own library to break a circular dependency between
+# velox_exec and velox_connector on MSVC (static libs cannot have cycles).
+velox_add_library(velox_spill_stats SpillStats.cpp)
+velox_link_libraries(
+  velox_spill_stats velox_common_base velox_file velox_exception)
+
 velox_add_library(
   velox_exec
   AddressableNonNullValueList.cpp
@@ -93,7 +100,6 @@ velox_add_library(
   SpatialJoinProbe.cpp
   Spill.cpp
   SpillFile.cpp
-  SpillStats.cpp
   Spiller.cpp
   StreamingAggregation.cpp
   StreamingEnforceDistinct.cpp
@@ -126,6 +132,7 @@ velox_link_libraries(
   velox_expression
   velox_file
   velox_presto_serializer
+  velox_spill_stats
   velox_trace
   velox_time
   velox_test_util

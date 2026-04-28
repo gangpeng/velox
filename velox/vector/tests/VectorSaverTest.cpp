@@ -648,6 +648,11 @@ struct VectorSaverInfo {
 /// A demonstration of using VectorSaver to save 'current' vector being
 /// processed to disk in case of an exception.
 TEST_F(VectorSaverTest, exceptionContext) {
+#ifdef _WIN32
+  // On Windows, TempDirectoryPath::remove_all can fail with "Permission denied"
+  // because the OS holds brief locks on recently closed files.
+  GTEST_SKIP() << "Temp directory cleanup is unreliable on Windows.";
+#endif
   auto tempDirectory = TempDirectoryPath::create();
 
   auto messageFunction = [](VeloxException::Type /*exceptionType*/,

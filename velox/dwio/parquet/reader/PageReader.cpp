@@ -24,7 +24,17 @@
 #include "velox/dwio/parquet/thrift/ThriftTransport.h"
 #include "velox/vector/FlatVector.h"
 
+// On Windows, guard against sockaddr_un redefinition between Folly and afunix.h.
+#ifdef _WIN32
+#pragma push_macro("_AFUNIX_")
+#ifndef _AFUNIX_
+#define _AFUNIX_
+#endif
+#endif
 #include <thrift/protocol/TCompactProtocol.h> // @manual
+#ifdef _WIN32
+#pragma pop_macro("_AFUNIX_")
+#endif
 
 using facebook::velox::common::testutil::TestValue;
 
@@ -33,10 +43,19 @@ namespace facebook::velox::parquet {
 using thrift::Encoding;
 using thrift::PageHeader;
 
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+struct Int96Timestamp {
+  int32_t days;
+  uint64_t nanos;
+};
+#pragma pack(pop)
+#else
 struct __attribute__((__packed__)) Int96Timestamp {
   int32_t days;
   uint64_t nanos;
 };
+#endif
 
 void PageReader::seekToPage(int64_t row) {
   defineDecoder_.reset();

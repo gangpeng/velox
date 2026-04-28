@@ -15,6 +15,9 @@
 
 %code requires
 {
+    #include <memory>
+    #include <string>
+    #include <vector>
     namespace facebook::velox::functions::prestosql {
         class Scanner;
     } // namespace facebook::velox::functions::prestosql

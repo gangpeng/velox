@@ -49,8 +49,7 @@
 #ifndef WIN32
 #include <sys/types.h>
 #else
-#define int32_t __int32
-#define int64_t __int64
+// int32_t and int64_t are defined by <stdint.h> / <cstdint> on MSVC; do not redefine them.
 #endif
 
 #ifdef WIN32
@@ -74,14 +73,15 @@ char* strdup(const char*);
 
 #ifdef WIN32
 #include <io.h> // @manual
-#include <winbase.h> // @manual
-#include <windows.h> // @manual
+#include <windows.h> // @manual (must come before winbase.h; windows.h includes winbase.h internally)
 #include <winsock2.h> // @manual
 #define random rand
 #define strncasecmp _strnicmp
 #define strcasecmp _stricmp
 #define strdup _strdup
-#define access _access
+// Note: do NOT #define access _access globally — it conflicts with
+// folly::access in folly/json/dynamic.h. Use _access() directly in dsdgen
+// source files that need it.
 #define isatty _isatty
 #define fileno _fileno
 #define F_OK 0

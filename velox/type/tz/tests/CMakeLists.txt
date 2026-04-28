@@ -21,7 +21,7 @@ target_link_libraries(
   velox_exception
   GTest::gtest
   GTest::gtest_main
-  pthread
+  $<$<NOT:$<BOOL:${MSVC}>>:pthread>
 )
 
 add_executable(velox_type_tz_ext_invalid_test TimeZoneMapExternalInvalidTest.cpp)
@@ -34,5 +34,5 @@ target_link_libraries(
   velox_exception
   GTest::gtest
   GTest::gtest_main
-  pthread
+  $<$<NOT:$<BOOL:${MSVC}>>:pthread>
 )

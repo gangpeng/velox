@@ -102,10 +102,11 @@ class MallocAllocator : public MemoryAllocator {
       ContiguousAllocation& allocation,
       MachinePageCount maxPages);
 
-  // Allocates 'maxBytes' of contiguous memory using malloc or mmap depending
-  // on 'mallocContiguousEnabled_'. Returns the allocated pointer, or nullptr
-  // on failure.
-  void* dispatchAllocateContiguous(size_t maxBytes);
+  // Allocates 'maxBytes' of contiguous address space using malloc or mmap
+  // depending on 'mallocContiguousEnabled_'. The mmap path commits only
+  // 'bytes', preserving growable contiguous-allocation semantics on Windows.
+  // Returns the allocated pointer, or nullptr on failure.
+  void* dispatchAllocateContiguous(size_t bytes, size_t maxBytes);
 
   // Frees contiguous memory previously allocated by
   // dispatchAllocateContiguous.

@@ -27,6 +27,7 @@
 #include <glog/logging.h>
 
 #include <folly/FBString.h>
+#include <folly/portability/SysTypes.h>
 
 namespace facebook::velox::strings {
 

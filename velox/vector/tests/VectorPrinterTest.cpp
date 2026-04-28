@@ -100,47 +100,47 @@ TEST_F(VectorPrinterTest, summarizeToText) {
   EXPECT_THAT(
       summarizeToLines(*data),
       ::testing::ElementsAre(
-          ::testing::MatchesRegex("ROW\\(4\\) 8 rows ROW [0-9]+.*"),
-          ::testing::MatchesRegex("   INTEGER 8 rows FLAT [0-9]+.*"),
-          ::testing::MatchesRegex("   ARRAY 8 rows ARRAY [0-9]+.*"),
+          ::testing::MatchesRegex("ROW\\(4\\) 8 rows ROW \\d+.*"),
+          ::testing::MatchesRegex("   INTEGER 8 rows FLAT \\d+.*"),
+          ::testing::MatchesRegex("   ARRAY 8 rows ARRAY \\d+.*"),
           "         Stats: 3 nulls, 1 empty, sizes: [2...4, avg 3]",
-          ::testing::MatchesRegex("      BIGINT 12 rows FLAT [0-9]+.*"),
-          ::testing::MatchesRegex("   MAP 8 rows DICTIONARY [0-9]+.*"),
+          ::testing::MatchesRegex("      BIGINT 12 rows FLAT \\d+.*"),
+          ::testing::MatchesRegex("   MAP 8 rows DICTIONARY \\d+.*"),
           "         Stats: 0 nulls, 4 unique",
-          ::testing::MatchesRegex("      MAP 4 rows MAP [0-9]+.*"),
+          ::testing::MatchesRegex("      MAP 4 rows MAP \\d+.*"),
           "            Stats: 0 nulls, 1 empty, sizes: [1...4, avg 2]",
-          ::testing::MatchesRegex("         INTEGER 8 rows FLAT [0-9]+.*"),
-          ::testing::MatchesRegex("         REAL 8 rows FLAT [0-9]+.*"),
-          ::testing::MatchesRegex("   VARCHAR 8 rows CONSTANT [0-9]+.*")));
+          ::testing::MatchesRegex("         INTEGER 8 rows FLAT \\d+.*"),
+          ::testing::MatchesRegex("         REAL 8 rows FLAT \\d+.*"),
+          ::testing::MatchesRegex("   VARCHAR 8 rows CONSTANT \\d+.*")));
 
   EXPECT_THAT(
       summarizeToLines(
           *data,
           {.types = {}, .includeChildNames = true, .includeNodeIds = true}),
       ::testing::ElementsAre(
-          ::testing::MatchesRegex("0 ROW\\(4\\) 8 rows ROW [0-9]+.*"),
-          ::testing::MatchesRegex("   0.0 INTEGER 8 rows FLAT [0-9]+.* a"),
-          ::testing::MatchesRegex("   0.1 ARRAY 8 rows ARRAY [0-9]+.* b"),
+          ::testing::MatchesRegex("0 ROW\\(4\\) 8 rows ROW \\d+.*"),
+          ::testing::MatchesRegex("   0.0 INTEGER 8 rows FLAT \\d+.* a"),
+          ::testing::MatchesRegex("   0.1 ARRAY 8 rows ARRAY \\d+.* b"),
           "         Stats: 3 nulls, 1 empty, sizes: [2...4, avg 3]",
-          ::testing::MatchesRegex("      0.1.0 BIGINT 12 rows FLAT [0-9]+.*"),
-          ::testing::MatchesRegex("   0.2 MAP 8 rows DICTIONARY [0-9]+.* c"),
+          ::testing::MatchesRegex("      0.1.0 BIGINT 12 rows FLAT \\d+.*"),
+          ::testing::MatchesRegex("   0.2 MAP 8 rows DICTIONARY \\d+.* c"),
           "         Stats: 0 nulls, 4 unique",
-          ::testing::MatchesRegex("      0.2.0 MAP 4 rows MAP [0-9]+.*"),
+          ::testing::MatchesRegex("      0.2.0 MAP 4 rows MAP \\d+.*"),
           "            Stats: 0 nulls, 1 empty, sizes: [1...4, avg 2]",
           ::testing::MatchesRegex(
-              "         0.2.0.0 INTEGER 8 rows FLAT [0-9]+.*"),
-          ::testing::MatchesRegex("         0.2.0.1 REAL 8 rows FLAT [0-9]+.*"),
+              "         0.2.0.0 INTEGER 8 rows FLAT \\d+.*"),
+          ::testing::MatchesRegex("         0.2.0.1 REAL 8 rows FLAT \\d+.*"),
           ::testing::MatchesRegex(
-              "   0.3 VARCHAR 8 rows CONSTANT [0-9]+.* d")));
+              "   0.3 VARCHAR 8 rows CONSTANT \\d+.* d")));
 
   EXPECT_THAT(
       summarizeToLines(*data, {.types = {}, .maxChildren = 2}),
       ::testing::ElementsAre(
-          ::testing::MatchesRegex("ROW\\(4\\) 8 rows ROW [0-9]+.*"),
-          ::testing::MatchesRegex("   INTEGER 8 rows FLAT [0-9]+.*"),
-          ::testing::MatchesRegex("   ARRAY 8 rows ARRAY [0-9]+.*"),
+          ::testing::MatchesRegex("ROW\\(4\\) 8 rows ROW \\d+.*"),
+          ::testing::MatchesRegex("   INTEGER 8 rows FLAT \\d+.*"),
+          ::testing::MatchesRegex("   ARRAY 8 rows ARRAY \\d+.*"),
           "         Stats: 3 nulls, 1 empty, sizes: [2...4, avg 3]",
-          ::testing::MatchesRegex("      BIGINT 12 rows FLAT [0-9]+.*"),
+          ::testing::MatchesRegex("      BIGINT 12 rows FLAT \\d+.*"),
           "   ...2 more"));
 
   EXPECT_THAT(
@@ -148,10 +148,10 @@ TEST_F(VectorPrinterTest, summarizeToText) {
           *data,
           {.types = {}, .maxChildren = 2, .indent = 2, .skipTopSummary = true}),
       ::testing::ElementsAre(
-          ::testing::MatchesRegex("         INTEGER 8 rows FLAT [0-9]+.*"),
-          ::testing::MatchesRegex("         ARRAY 8 rows ARRAY [0-9]+.*"),
+          ::testing::MatchesRegex("         INTEGER 8 rows FLAT \\d+.*"),
+          ::testing::MatchesRegex("         ARRAY 8 rows ARRAY \\d+.*"),
           "               Stats: 3 nulls, 1 empty, sizes: [2...4, avg 3]",
-          ::testing::MatchesRegex("            BIGINT 12 rows FLAT [0-9]+.*"),
+          ::testing::MatchesRegex("            BIGINT 12 rows FLAT \\d+.*"),
           "         ...2 more"));
 }
 

@@ -18,7 +18,23 @@
 
 #include "boost/filesystem.hpp"
 
+#ifdef _WIN32
+#include <Windows.h>
+#include <direct.h>
+#endif
+
+#include <algorithm>
+#include <atomic>
+
+#include <fmt/format.h>
+
 namespace facebook::velox::common::testutil {
+
+#ifdef _WIN32
+namespace {
+std::atomic<uint64_t> tempDirectoryCounter{0};
+}
+#endif
 
 std::shared_ptr<TempDirectoryPath> TempDirectoryPath::create(bool injectFault) {
   auto* tempDirPath = new TempDirectoryPath(injectFault);
@@ -36,10 +52,47 @@ TempDirectoryPath::~TempDirectoryPath() {
 }
 
 std::string TempDirectoryPath::createTempDirectory() {
+#ifdef _WIN32
+  char tmpDir[MAX_PATH];
+  DWORD ret = ::GetTempPathA(MAX_PATH, tmpDir);
+  if (ret == 0 || ret > MAX_PATH) {
+    VELOX_FAIL("Cannot get temp directory");
+  }
+
+  std::string path;
+  constexpr int kMaxAttempts = 100;
+  for (int attempt = 0; attempt < kMaxAttempts; ++attempt) {
+    const auto id =
+        tempDirectoryCounter.fetch_add(1, std::memory_order_relaxed);
+    path = fmt::format(
+        "{}velox_test_dir_{}_{}_{}_{}",
+        tmpDir,
+        ::GetCurrentProcessId(),
+        ::GetCurrentThreadId(),
+        ::GetTickCount64(),
+        id);
+
+    // Create the directory directly instead of using GetTempFileNameA followed
+    // by DeleteFile/CreateDirectory. The file-to-directory conversion has a
+    // race window under parallel Windows tests and can fail with
+    // ERROR_ALREADY_EXISTS.
+    if (::CreateDirectoryA(path.c_str(), nullptr)) {
+      std::replace(path.begin(), path.end(), '\\', '/');
+      return path;
+    }
+    if (::GetLastError() != ERROR_ALREADY_EXISTS) {
+      VELOX_FAIL("Cannot create temp directory: {}", ::GetLastError());
+    }
+  }
+
+  VELOX_FAIL(
+      "Cannot create unique temp directory after {} attempts", kMaxAttempts);
+#else
   char tempPath[] = "/tmp/velox_test_XXXXXX";
   const char* tempDirectoryPath = ::mkdtemp(tempPath);
   VELOX_CHECK_NOT_NULL(tempDirectoryPath, "Cannot open temp directory");
   return tempDirectoryPath;
+#endif
 }
 
 } // namespace facebook::velox::common::testutil

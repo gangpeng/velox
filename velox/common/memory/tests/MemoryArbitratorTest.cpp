@@ -103,25 +103,25 @@ TEST_F(MemoryArbitrationTest, queryMemoryCapacity) {
   {
     // Reserved memory is not enforced when no arbitrator is provided.
     MemoryManager::Options options;
-    options.allocatorCapacity = 8L << 20;
-    options.arbitratorCapacity = 4L << 20;
+    options.allocatorCapacity = 8LL << 20;
+    options.arbitratorCapacity = 4LL << 20;
     using ExtraConfig = SharedArbitrator::ExtraConfig;
     options.extraArbitratorConfigs = {
         {std::string(ExtraConfig::kReservedCapacity), "2MB"}};
     MemoryManager manager(options);
-    auto rootPool = manager.addRootPool("root-1", 8L << 20);
+    auto rootPool = manager.addRootPool("root-1", 8LL << 20);
     auto leafPool = rootPool->addLeafChild("leaf-1.0");
     void* buffer;
     ASSERT_NO_THROW({
-      buffer = leafPool->allocate(7L << 20);
-      leafPool->free(buffer, 7L << 20);
+      buffer = leafPool->allocate(7LL << 20);
+      leafPool->free(buffer, 7LL << 20);
     });
   }
   {
     // Reserved memory is enforced when SharedMemoryArbitrator is used.
     MemoryManager::Options options;
-    options.allocatorCapacity = 16L << 20;
-    options.arbitratorCapacity = 6L << 20;
+    options.allocatorCapacity = 16LL << 20;
+    options.arbitratorCapacity = 6LL << 20;
     options.arbitratorKind = "SHARED";
     using ExtraConfig = SharedArbitrator::ExtraConfig;
     options.extraArbitratorConfigs = {
@@ -130,7 +130,7 @@ TEST_F(MemoryArbitrationTest, queryMemoryCapacity) {
         {std::string(ExtraConfig::kMemoryPoolReservedCapacity), "1MB"}};
     MemoryManager manager(options);
     auto rootPool =
-        manager.addRootPool("root-1", 8L << 20, MemoryReclaimer::create());
+        manager.addRootPool("root-1", 8LL << 20, MemoryReclaimer::create());
     ASSERT_EQ(rootPool->capacity(), 1 << 20);
     ASSERT_NO_THROW(
         manager.arbitrator()->growCapacity(rootPool.get(), 1 << 20));
@@ -149,7 +149,7 @@ TEST_F(MemoryArbitrationTest, queryMemoryCapacity) {
 
     auto leafPool = rootPool->addLeafChild("leaf-1.0");
     VELOX_ASSERT_THROW(
-        leafPool->allocate(7L << 20), "Exceeded memory pool capacity");
+        leafPool->allocate(7LL << 20), "Exceeded memory pool capacity");
     ASSERT_EQ(manager.arbitrator()->shrinkCapacity(rootPool.get(), 0), 0);
     VELOX_ASSERT_THROW(
         manager.arbitrator()->shrinkCapacity(leafPool.get(), 0), "");
@@ -780,7 +780,7 @@ TEST_F(MemoryReclaimerTest, scopedReclaimedBytesRecorder) {
 
 TEST_F(MemoryReclaimerTest, orderedReclaim) {
   // Set 1MB unit to avoid memory pool quantized reservation effect.
-  const int allocUnitBytes = 1L << 20;
+  const int allocUnitBytes = 1LL << 20;
   const int numChildren = 5;
   // The initial allocation units per each child pool.
   const std::vector<int> initAllocUnitsVec = {10, 11, 8, 16, 5};
@@ -915,7 +915,7 @@ TEST_F(MemoryReclaimerTest, orderedReclaim) {
 
 TEST_F(MemoryReclaimerTest, skipNonReclaimableChild) {
   // Set 1MB unit to avoid memory pool quantized reservation effect.
-  const int allocUnitBytes = 1L << 20;
+  const int allocUnitBytes = 1LL << 20;
   const int numChildren = 5;
   // The initial allocation units per each child pool.
   const std::vector<int> initAllocUnitsVec = {10, 11, 8, 16, 5};

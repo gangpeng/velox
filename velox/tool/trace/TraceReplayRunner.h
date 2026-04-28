@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <gflags/gflags.h>
 #include <utility>
 #include "velox/common/file/FileSystems.h"
 #include "velox/tool/trace/OperatorReplayerBase.h"
@@ -24,6 +25,7 @@
 #include "velox/exec/TaskTraceReader.h"
 
 DECLARE_string(root_dir);
+DECLARE_bool(fast);
 DECLARE_bool(summary);
 DECLARE_bool(short_summary);
 DECLARE_string(query_id);

@@ -36,7 +36,7 @@ inline bool isIPv4(int128_t ip) {
 inline int128_t getIPSubnetMax(int128_t ip, uint8_t prefix) {
   uint128_t mask = 1;
   if (isIPv4(ip)) {
-    ip |= (mask << (ipaddress::kIPV4Bits - prefix)) - 1;
+    ip |= static_cast<int128_t>((mask << (ipaddress::kIPV4Bits - prefix)) - 1);
     return ip;
   }
 
@@ -45,7 +45,7 @@ inline int128_t getIPSubnetMax(int128_t ip, uint8_t prefix) {
     return -1;
   }
 
-  ip |= (mask << (ipaddress::kIPV6Bits - prefix)) - 1;
+  ip |= static_cast<int128_t>((mask << (ipaddress::kIPV6Bits - prefix)) - 1);
   return ip;
 }
 } // namespace
@@ -164,15 +164,17 @@ struct IPSubnetOfFunction {
     uint128_t mask = 1;
     const uint8_t prefix = *ipPrefix.template at<1>();
     if (isIPv4(*ipPrefix.template at<0>())) {
-      checkIP &= ((mask << (ipaddress::kIPV4Bits - prefix)) - 1) ^
-          static_cast<uint128_t>(-1);
+      checkIP &= static_cast<int128_t>(
+          ((mask << (ipaddress::kIPV4Bits - prefix)) - 1) ^
+          static_cast<uint128_t>(-1));
     } else {
       // Special case: Overflow to all 0 subtracting 1 does not work.
       if (prefix == 0) {
         checkIP = 0;
       } else {
-        checkIP &= ((mask << (ipaddress::kIPV6Bits - prefix)) - 1) ^
-            static_cast<uint128_t>(-1);
+        checkIP &= static_cast<int128_t>(
+            ((mask << (ipaddress::kIPV6Bits - prefix)) - 1) ^
+            static_cast<uint128_t>(-1));
       }
     }
 
@@ -267,7 +269,7 @@ struct IPPrefixCollapseFunction {
         (num < 0) ? static_cast<uint128_t>(-num) : static_cast<uint128_t>(num);
 
     // Find the position of the highest bit using logarithm (base 2)
-    return static_cast<int64_t>(std::log2(abs_num)) + 1;
+    return static_cast<int64_t>(std::log2(static_cast<double>(abs_num))) + 1;
   }
 
   FOLLY_ALWAYS_INLINE static int64_t getLowestSetBit(int128_t x) {
@@ -278,11 +280,11 @@ struct IPPrefixCollapseFunction {
     // Check the lower 64 bits
     static constexpr uint64_t mask = 0xFFFFFFFFFFFFFFFF;
     if (x & mask) {
-      return __builtin_ctzll(x & mask);
+      return __builtin_ctzll(static_cast<uint64_t>(x & mask));
     }
 
     // Check the upper 64 bits
-    return __builtin_ctzll(x >> 64) + 64;
+    return __builtin_ctzll(static_cast<uint64_t>(x >> 64)) + 64;
   }
 
   FOLLY_ALWAYS_INLINE static int64_t findRangeBits(
@@ -340,7 +342,7 @@ struct IPPrefixCollapseFunction {
       ipPrefixSlices.emplace_back(firstIpAddress, prefixLength);
 
       int128_t ipCount = static_cast<int128_t>(1)
-          << static_cast<int128_t>(ipVersionMaxBits - prefixLength);
+          << static_cast<int>(ipVersionMaxBits - prefixLength);
       firstIpAddress += ipCount;
     }
     return ipPrefixSlices;
@@ -470,7 +472,7 @@ struct IPPrefixSubnetsFunction {
 
     for (uint128_t i = 0; i < newPrefixCount; i++) {
       writeResults(result, currentIpAddress, newPrefixLength);
-      currentIpAddress += newPrefixIpCount;
+      currentIpAddress += static_cast<int128_t>(newPrefixIpCount);
     }
     return;
   }

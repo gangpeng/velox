@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
       benchmarkBuilder
           .addBenchmarkSet(
               fmt::format(
-                  "Dict#{}#{}\%null", inputType->toString(), nullRatio * 100),
+                  "Dict#{}#{}%null", inputType->toString(), nullRatio * 100),
               fuzzer.fuzzRow(
                   std::move(childrenVectors), {"c0", "c1"}, opts.vectorSize))
           .addExpression("equalto", "equalto(c0, c1)")
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
       benchmarkBuilder
           .addBenchmarkSet(
               fmt::format(
-                  "Flat#{}#{}\%null", inputType->toString(), nullRatio * 100),
+                  "Flat#{}#{}%null", inputType->toString(), nullRatio * 100),
               ROW({"c0", "c1"}, {inputType, inputType}))
           .withFuzzerOptions(opts)
           .addExpression("equalto", "equalto(c0, c1)")

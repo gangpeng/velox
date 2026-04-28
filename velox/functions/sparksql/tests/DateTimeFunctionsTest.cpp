@@ -78,6 +78,9 @@ class DateTimeFunctionsTest : public SparkFunctionBaseTest {
 };
 
 TEST_F(DateTimeFunctionsTest, toUtcTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   const auto toUtcTimestamp = [&](const StringView& ts, const std::string& tz) {
     auto timestamp = std::make_optional<Timestamp>(parseTimestamp(ts));
     auto result = evaluateOnce<Timestamp>(
@@ -110,6 +113,9 @@ TEST_F(DateTimeFunctionsTest, toUtcTimestamp) {
 }
 
 TEST_F(DateTimeFunctionsTest, fromUtcTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   const auto fromUtcTimestamp = [&](const StringView& ts,
                                     const std::string& tz) {
     auto timestamp = std::make_optional<Timestamp>(parseTimestamp(ts));
@@ -140,6 +146,9 @@ TEST_F(DateTimeFunctionsTest, fromUtcTimestamp) {
 }
 
 TEST_F(DateTimeFunctionsTest, toFromUtcTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   const auto toFromUtcTimestamp = [&](const StringView& ts,
                                       const std::string& tz) {
     auto timestamp = std::make_optional<Timestamp>(parseTimestamp(ts));
@@ -167,6 +176,9 @@ TEST_F(DateTimeFunctionsTest, toFromUtcTimestamp) {
 }
 
 TEST_F(DateTimeFunctionsTest, year) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   const auto year = [&](std::optional<Timestamp> date) {
     return evaluateOnce<int32_t>("year(c0)", date);
   };
@@ -257,6 +269,9 @@ TEST_F(DateTimeFunctionsTest, unixDate) {
 }
 
 TEST_F(DateTimeFunctionsTest, unixTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   const auto unixTimestamp = [&](std::optional<StringView> dateStr) {
     return evaluateOnce<int64_t>("unix_timestamp(c0)", dateStr);
   };
@@ -299,6 +314,9 @@ TEST_F(DateTimeFunctionsTest, unixTimestampCurrent) {
 }
 
 TEST_F(DateTimeFunctionsTest, unixTimestampCustomFormat) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   const auto unixTimestamp = [&](std::optional<StringView> dateStr,
                                  std::optional<StringView> formatStr) {
     return evaluateOnce<int64_t>("unix_timestamp(c0, c1)", dateStr, formatStr);
@@ -340,6 +358,9 @@ TEST_F(DateTimeFunctionsTest, unixTimestampTimestampInput) {
 }
 
 TEST_F(DateTimeFunctionsTest, unixTimestampDateInput) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto unixTimestamp = [&](std::optional<int32_t> date) {
     return evaluateOnce<int64_t>("unix_timestamp(c0)", {DATE()}, date);
   };
@@ -824,6 +845,9 @@ TEST_F(DateTimeFunctionsTest, nextDay) {
 }
 
 TEST_F(DateTimeFunctionsTest, getTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto getTimestamp = [&](const std::optional<StringView>& dateString,
                                 const std::string& format) {
     return evaluateOnce<Timestamp>(
@@ -922,6 +946,9 @@ TEST_F(DateTimeFunctionsTest, getTimestamp) {
 }
 
 TEST_F(DateTimeFunctionsTest, hour) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto hour = [&](const StringView timestampStr) {
     const auto timeStamp = std::make_optional(parseTimestamp(timestampStr));
     return evaluateOnce<int32_t>("hour(c0)", timeStamp);
@@ -944,6 +971,9 @@ TEST_F(DateTimeFunctionsTest, hour) {
 }
 
 TEST_F(DateTimeFunctionsTest, minute) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto minute = [&](const StringView& timestampStr) {
     const auto timeStamp = std::make_optional(parseTimestamp(timestampStr));
     return evaluateOnce<int32_t>("minute(c0)", timeStamp);
@@ -984,6 +1014,9 @@ TEST_F(DateTimeFunctionsTest, second) {
 }
 
 TEST_F(DateTimeFunctionsTest, fromUnixtime) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto getUnixTime = [&](const StringView& str) {
     Timestamp t = parseTimestamp(str);
     return t.getSeconds();
@@ -1340,6 +1373,9 @@ TEST_F(DateTimeFunctionsTest, timestampToMillis) {
 }
 
 TEST_F(DateTimeFunctionsTest, dateTrunc) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto dateTrunc = [&](const std::string& format,
                              std::optional<Timestamp> timestamp) {
     return evaluateOnce<Timestamp>(
@@ -1459,6 +1495,9 @@ TEST_F(DateTimeFunctionsTest, trunc) {
 }
 
 TEST_F(DateTimeFunctionsTest, timestampdiff) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto timestampDiff = [&](const std::string& unit,
                                  std::optional<Timestamp> timestamp1,
                                  std::optional<Timestamp> timestamp2) {

@@ -19,7 +19,11 @@
 #include "velox/parse/Expressions.h"
 #include "velox/type/Variant.h"
 
-#include <duckdb.hpp> // @manual
+#include "velox/duckdb/conversion/DuckDBIncludes.h"
+#ifdef _MSC_VER
+#pragma push_macro("BOOLEAN")
+#undef BOOLEAN
+#endif
 #include <duckdb/parser/expression/between_expression.hpp> // @manual
 #include <duckdb/parser/expression/case_expression.hpp> // @manual
 #include <duckdb/parser/expression/cast_expression.hpp> // @manual
@@ -32,6 +36,9 @@
 #include <duckdb/parser/expression/window_expression.hpp> // @manual
 #include <duckdb/parser/parser.hpp> // @manual
 #include <duckdb/parser/parser_options.hpp> // @manual
+#ifdef _MSC_VER
+#pragma pop_macro("BOOLEAN")
+#endif
 
 namespace facebook::velox::duckdb {
 

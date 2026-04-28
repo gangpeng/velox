@@ -97,6 +97,11 @@ class TableScanReplayerTest : public HiveConnectorTestBase {
 };
 
 TEST_F(TableScanReplayerTest, runner) {
+  gflags::FlagSaver flagSaver;
+  // TraceReplayRunner prompts in CLI mode. The test populates all flags
+  // directly, so fast mode avoids waiting on stdin during test runs.
+  FLAGS_fast = true;
+
   const auto vectors = makeVectors(10, 100);
   const auto testDir = TempDirectoryPath::create();
   const auto traceRoot = fmt::format("{}/{}", testDir->getPath(), "traceRoot");
@@ -116,7 +121,7 @@ TEST_F(TableScanReplayerTest, runner) {
           .maxDrivers(1)
           .config(core::QueryConfig::kQueryTraceEnabled, true)
           .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-          .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+          .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
           .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
           .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_)
           .splits(makeHiveConnectorSplits(splitFiles))
@@ -188,7 +193,7 @@ TEST_F(TableScanReplayerTest, basic) {
           .maxDrivers(4)
           .config(core::QueryConfig::kQueryTraceEnabled, true)
           .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-          .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+          .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
           .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
           .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_)
           .splits(makeHiveConnectorSplits(splitFiles))
@@ -257,7 +262,7 @@ TEST_F(TableScanReplayerTest, columnPrunning) {
           .maxDrivers(4)
           .config(core::QueryConfig::kQueryTraceEnabled, true)
           .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-          .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+          .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
           .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
           .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_)
           .splits(makeHiveConnectorSplits(splitFiles))
@@ -319,7 +324,7 @@ TEST_F(TableScanReplayerTest, subfieldPrunning) {
       AssertQueryBuilder(plan)
           .config(core::QueryConfig::kQueryTraceEnabled, true)
           .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-          .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+          .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
           .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
           .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_)
           .split(makeHiveConnectorSplit(filePath->getPath()))
@@ -360,7 +365,7 @@ TEST_F(TableScanReplayerTest, concurrent) {
           .maxDrivers(4)
           .config(core::QueryConfig::kQueryTraceEnabled, true)
           .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-          .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+          .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
           .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
           .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_)
           .splits(makeHiveConnectorSplits(splitFiles))

@@ -90,11 +90,12 @@ TEST_F(VariantToVectorTest, decimal) {
   auto type = DECIMAL(20, 3);
   testNull(type);
 
-  std::vector<int128_t> data = {1000123};
+  std::vector<int128_t> data = {int128_t(1000123)};
   VectorPtr expected = makeFlatVector<int128_t>(data, type);
   testValue(type, Variant(data[0]), expected);
 
-  std::vector<int128_t> arrayData = {1000123, 1000456, 10000789};
+  std::vector<int128_t> arrayData = {
+      int128_t(1000123), int128_t(1000456), int128_t(10000789)};
 
   std::vector<Variant> arrayInputData = {
       Variant(arrayData[0]), Variant(arrayData[1]), Variant(arrayData[2])};

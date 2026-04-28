@@ -1,0 +1,36 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+--- a/cpp/cmake_modules/ThirdpartyToolchain.cmake
++++ b/cpp/cmake_modules/ThirdpartyToolchain.cmake
+@@ -884,10 +884,16 @@ foreach(CONFIG DEBUG MINSIZEREL RELEASE RELWITHDEBINFO)
+   set(EP_CXX_FLAGS_${CONFIG} "${CMAKE_CXX_FLAGS_${CONFIG}}")
+   set(EP_C_FLAGS_${CONFIG} "${CMAKE_C_FLAGS_${CONFIG}}")
+   if(CONFIG STREQUAL DEBUG)
+-    set(EP_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
++    if(ARROW_USE_STATIC_CRT)
++      set(EP_MSVC_RUNTIME_LIBRARY MultiThreadedDebug)
++    else()
++      set(EP_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
++    endif()
+   else()
+-    set(EP_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
++    if(ARROW_USE_STATIC_CRT)
++      set(EP_MSVC_RUNTIME_LIBRARY MultiThreaded)
++    else()
++      set(EP_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
++    endif()
+   endif()
+   string(APPEND EP_CXX_FLAGS_${CONFIG}
+          " ${CMAKE_CXX_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_${EP_MSVC_RUNTIME_LIBRARY}}")

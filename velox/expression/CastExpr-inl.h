@@ -399,14 +399,14 @@ VectorPtr CastExpr::applyDecimalToFloatCast(
               .thenOrThrow(folly::identity, [&](const Status& status) {
                 VELOX_USER_FAIL("{}", status.message());
               });
-      finalValue = static_cast<To>(output / scaleFactor);
+      finalValue = static_cast<To>(output / static_cast<double>(scaleFactor));
     } else {
       const auto output =
           util::Converter<ToKind>::tryCast(unscaledValue)
               .thenOrThrow(folly::identity, [&](const Status& status) {
                 VELOX_USER_FAIL("{}", status.message());
               });
-      finalValue = output / scaleFactor;
+      finalValue = output / static_cast<To>(scaleFactor);
     }
     resultBuffer[row] = finalValue;
   });

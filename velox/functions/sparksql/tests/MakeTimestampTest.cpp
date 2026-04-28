@@ -32,6 +32,9 @@ class MakeTimestampTest : public SparkFunctionBaseTest {
 };
 
 TEST_F(MakeTimestampTest, basic) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto microsType = DECIMAL(16, 6);
   const auto testMakeTimestamp = [&](const RowVectorPtr& data,
                                      const VectorPtr& expected,
@@ -108,6 +111,9 @@ TEST_F(MakeTimestampTest, basic) {
 }
 
 TEST_F(MakeTimestampTest, errors) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto microsType = DECIMAL(16, 6);
   const auto testInvalidInputs = [&](const RowVectorPtr& data) {
     std::vector<std::optional<Timestamp>> nullResults(
@@ -186,6 +192,9 @@ TEST_F(MakeTimestampTest, errors) {
 }
 
 TEST_F(MakeTimestampTest, invalidTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto microsType = DECIMAL(16, 6);
   const auto year = makeFlatVector<int32_t>({2021, 2021, 2021, 2021, 2021});
   const auto month = makeFlatVector<int32_t>({7, 7, 7, 7, 7});

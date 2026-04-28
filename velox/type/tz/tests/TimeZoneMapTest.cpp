@@ -26,7 +26,21 @@ namespace {
 
 using namespace std::chrono;
 
+// Returns true if named time zones (e.g., "America/Los_Angeles") are available
+// in the timezone database. On Windows with a minimal tzdata.zi that only
+// contains UTC/GMT, named zones are not present.
+bool hasNamedTimeZones() {
+  try {
+    return locateZone("America/Los_Angeles") != nullptr;
+  } catch (...) {
+    return false;
+  }
+}
+
 TEST(TimeZoneMapTest, locateZoneID) {
+  if (!hasNamedTimeZones()) {
+    GTEST_SKIP() << "Named time zones not available in timezone database.";
+  }
   auto locateZoneID = [&](std::string_view name) {
     const auto* tz = locateZone(name);
     EXPECT_NE(tz, nullptr);
@@ -67,6 +81,9 @@ TEST(TimeZoneMapTest, locateZoneUTCAlias) {
 }
 
 TEST(TimeZoneMapTest, offsetToLocal) {
+  if (!hasNamedTimeZones()) {
+    GTEST_SKIP() << "Named time zones not available in timezone database.";
+  }
   auto toLocalTime = [&](std::string_view name, size_t ts) {
     const auto* tz = locateZone(name);
     EXPECT_NE(tz, nullptr);
@@ -92,6 +109,9 @@ TEST(TimeZoneMapTest, offsetToLocal) {
 }
 
 TEST(TimeZoneMapTest, offsetToSys) {
+  if (!hasNamedTimeZones()) {
+    GTEST_SKIP() << "Named time zones not available in timezone database.";
+  }
   auto toSysTime = [&](std::string_view name, size_t ts) {
     const auto* tz = locateZone(name);
     EXPECT_NE(tz, nullptr);
@@ -160,6 +180,9 @@ TEST(TimeZoneMapTest, timePointBoundary) {
 }
 
 TEST(TimeZoneMapTest, getTimeZoneName) {
+  if (!hasNamedTimeZones()) {
+    GTEST_SKIP() << "Named time zones not available in timezone database.";
+  }
   EXPECT_EQ("America/Los_Angeles", getTimeZoneName(1825));
   EXPECT_EQ("Europe/Moscow", getTimeZoneName(2079));
   EXPECT_EQ("Pacific/Kanton", getTimeZoneName(2231));
@@ -170,6 +193,9 @@ TEST(TimeZoneMapTest, getTimeZoneName) {
 }
 
 TEST(TimeZoneMapTest, getTimeZoneID) {
+  if (!hasNamedTimeZones()) {
+    GTEST_SKIP() << "Named time zones not available in timezone database.";
+  }
   EXPECT_EQ(1825, getTimeZoneID("America/Los_Angeles"));
   EXPECT_EQ(2079, getTimeZoneID("Europe/Moscow"));
   EXPECT_EQ(2231, getTimeZoneID("Pacific/Kanton"));
@@ -255,6 +281,9 @@ TEST(TimeZoneMapTest, getTimeZoneIDFromOffset) {
 }
 
 TEST(TimeZoneMapTest, offset) {
+  if (!hasNamedTimeZones()) {
+    GTEST_SKIP() << "Named time zones not available in timezone database.";
+  }
   // Test offset-based timezones - should return the offset value.
   {
     const auto* tz = locateZone("+05:30");
@@ -318,6 +347,9 @@ TEST(TimeZoneMapTest, invalid) {
 }
 
 TEST(TimeZoneMapTest, getShortName) {
+  if (!hasNamedTimeZones()) {
+    GTEST_SKIP() << "Named time zones not available in timezone database.";
+  }
   auto toShortName = [&](std::string_view name, size_t ts) {
     const auto* tz = locateZone(name);
     EXPECT_NE(tz, nullptr);
@@ -343,6 +375,9 @@ TEST(TimeZoneMapTest, getShortName) {
 }
 
 TEST(TimeZoneMapTest, getLongName) {
+  if (!hasNamedTimeZones()) {
+    GTEST_SKIP() << "Named time zones not available in timezone database.";
+  }
   auto toLongName = [&](std::string_view name, size_t ts) {
     const auto* tz = locateZone(name);
     EXPECT_NE(tz, nullptr);

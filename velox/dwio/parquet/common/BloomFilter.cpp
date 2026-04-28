@@ -21,8 +21,18 @@
 #include "velox/dwio/parquet/thrift/ParquetThriftTypes.h"
 #include "velox/dwio/parquet/thrift/ThriftTransport.h"
 
+// On Windows, guard against sockaddr_un redefinition between Folly and afunix.h.
+#ifdef _WIN32
+#pragma push_macro("_AFUNIX_")
+#ifndef _AFUNIX_
+#define _AFUNIX_
+#endif
+#endif
 #include <thrift/protocol/TCompactProtocol.h>
 #include <thrift/transport/TBufferTransports.h>
+#ifdef _WIN32
+#pragma pop_macro("_AFUNIX_")
+#endif
 
 #include <cstdint>
 #include <cstring>

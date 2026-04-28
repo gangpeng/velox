@@ -24,5 +24,5 @@ target_link_libraries(
   GTest::gtest
   GTest::gtest_main
   glog::glog
-  dl
+  $<$<NOT:$<BOOL:${WIN32}>>:dl>
 )

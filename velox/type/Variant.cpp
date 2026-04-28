@@ -16,6 +16,9 @@
 
 #include "velox/type/Variant.h"
 #include <cfloat>
+#ifdef _MSC_VER
+#include <sstream>
+#endif
 #include "folly/json.h"
 #include "velox/common/base/BitUtil.h"
 #include "velox/common/encode/Base64.h"
@@ -254,7 +257,15 @@ std::string Variant::toString(const TypePtr& type) const {
       if (type->isLongDecimal()) {
         return DecimalUtil::toString(value<TypeKind::HUGEINT>(), type);
       }
+#ifdef _MSC_VER
+      {
+        std::ostringstream oss;
+        oss << value<TypeKind::HUGEINT>();
+        return oss.str();
+      }
+#else
       return folly::to<std::string>(value<TypeKind::HUGEINT>());
+#endif
     }
     case TypeKind::TINYINT:
       [[fallthrough]];
@@ -470,7 +481,15 @@ std::string Variant::toJson(const Type& type) const {
       if (type.isLongDecimal()) {
         return DecimalUtil::toString(value<TypeKind::HUGEINT>(), type);
       }
+#ifdef _MSC_VER
+      {
+        std::ostringstream oss;
+        oss << value<TypeKind::HUGEINT>();
+        return oss.str();
+      }
+#else
       return folly::to<std::string>(value<TypeKind::HUGEINT>());
+#endif
     }
     case TypeKind::TINYINT:
       [[fallthrough]];
@@ -599,7 +618,15 @@ std::string Variant::toJsonUnsafe(const TypePtr& type) const {
       if (type && type->isLongDecimal()) {
         return DecimalUtil::toString(value<TypeKind::HUGEINT>(), type);
       }
+#ifdef _MSC_VER
+      {
+        std::ostringstream oss;
+        oss << value<TypeKind::HUGEINT>();
+        return oss.str();
+      }
+#else
       return folly::to<std::string>(value<TypeKind::HUGEINT>());
+#endif
     }
     case TypeKind::TINYINT:
       [[fallthrough]];
@@ -727,7 +754,9 @@ folly::dynamic Variant::serialize() const {
       break;
     }
     case TypeKind::HUGEINT: {
-      objValue = value<TypeKind::HUGEINT>();
+      // folly::dynamic stores integral values as int64_t, so use a decimal
+      // string to preserve the full 128-bit HUGEINT range across serialization.
+      objValue = std::to_string(value<TypeKind::HUGEINT>());
       break;
     }
     case TypeKind::BOOLEAN: {
@@ -833,6 +862,12 @@ Variant Variant::create(const folly::dynamic& variantobj) {
     case TypeKind::BIGINT:
       return Variant::create<TypeKind::BIGINT>(obj.asInt());
     case TypeKind::HUGEINT:
+      // New serialized values are decimal strings. Accept int64_t values as
+      // well to keep older Variant serializations readable.
+      if (obj.isString()) {
+        return Variant::create<TypeKind::HUGEINT>(
+            HugeInt::parse(obj.asString()));
+      }
       return Variant::create<TypeKind::HUGEINT>(obj.asInt());
     case TypeKind::BOOLEAN: {
       return Variant(obj.asBool());

@@ -119,7 +119,7 @@ void OperatorTestBase::setupMemory(
 }
 
 void OperatorTestBase::resetMemory() {
-  OperatorTestBase::setupMemory(8L << 30, 6L << 30, 0, 512 << 20, 0, 0, 0);
+  OperatorTestBase::setupMemory(8LL << 30, 6LL << 30, 0, 512 << 20, 0, 0, 0);
 }
 
 void OperatorTestBase::SetUp() {

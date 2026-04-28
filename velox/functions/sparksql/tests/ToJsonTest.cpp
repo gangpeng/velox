@@ -223,6 +223,9 @@ TEST_F(ToJsonTest, longDecimal) {
 }
 
 TEST_F(ToJsonTest, basicTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   auto data = makeNullableFlatVector<Timestamp>(
       {Timestamp(0, 0),
        Timestamp(1582934400, 0),

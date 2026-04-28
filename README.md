@@ -124,6 +124,7 @@ The minimum versions of supported compilers:
 | Linux | gcc | 11 |
 | Linux | clang | 15 |
 | macOS | clang | 15 |
+| Windows | MSVC | 19.29+ (VS 2019 16.11+) |
 
 The recommended OS versions and compilers:
 
@@ -212,6 +213,41 @@ $ make
 Note that the `install_adapters` command is available for the supported MacOS and
 Ubuntu (20.04 or later) scripts. Individual adapters can be installed by specifying
 the individual install command, e.g. `setup-centos9.sh install_aws`.
+
+### Setting up on Windows (experimental)
+
+Velox can be built on Windows with MSVC (Visual Studio 2019 16.11+ or VS 2022).
+Dependencies are managed via [vcpkg](https://vcpkg.io/) with the
+`x64-windows-static` triplet.
+
+**Prerequisites:**
+- Visual Studio 2019 16.11+ or Visual Studio 2022 with C++ workload
+- CMake 3.28+ and Ninja
+- [vcpkg](https://github.com/microsoft/vcpkg) bootstrapped and available
+
+**Install dependencies with vcpkg:**
+```shell
+vcpkg install --triplet x64-windows-static boost-filesystem boost-headers ^
+  boost-sort boost-random boost-multiprecision boost-crc boost-circular-buffer ^
+  glog gflags double-conversion fmt re2 protobuf icu zlib zstd lz4 snappy ^
+  openssl gtest abseil
+```
+
+**Configure and build:**
+```shell
+# Open a "Developer Command Prompt for VS" or run vcvarsall.bat x64 first
+set VCPKG_TRIPLET_INSTALL_DIR=C:\path\to\vcpkg\installed\x64-windows-static
+cmake -G Ninja -B _build/release -S . ^
+  -DCMAKE_BUILD_TYPE=Release ^
+  -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake ^
+  -DVCPKG_TARGET_TRIPLET=x64-windows-static
+cmake --build _build/release -j %NUMBER_OF_PROCESSORS%
+```
+
+**Run tests:**
+```shell
+cd _build/release && ctest -j %NUMBER_OF_PROCESSORS%
+```
 
 ### Using Clang on Linux
 

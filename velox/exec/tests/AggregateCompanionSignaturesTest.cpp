@@ -16,6 +16,8 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+
 #include "velox/exec/Aggregate.h"
 #include "velox/exec/tests/DummyAggregateFunction.h"
 #include "velox/expression/FunctionSignature.h"
@@ -56,11 +58,21 @@ class AggregateCompanionSignaturesTest : public testing::Test {
       const std::vector<CompanionSignatureEntry>& actual,
       const std::vector<TestCompanionSignatureEntry>& expected) {
     EXPECT_EQ(actual.size(), expected.size());
-    for (int i = 0; i < actual.size(); ++i) {
-      EXPECT_EQ(actual[i].functionName, expected[i].functionName);
-      for (int j = 0; j < actual[i].signatures.size(); ++j) {
+    // Sort both sides by functionName to handle non-deterministic iteration
+    // order across compilers.
+    auto sortedActual = actual;
+    std::sort(sortedActual.begin(), sortedActual.end(), [](const auto& a, const auto& b) {
+      return a.functionName < b.functionName;
+    });
+    auto sortedExpected = expected;
+    std::sort(sortedExpected.begin(), sortedExpected.end(), [](const auto& a, const auto& b) {
+      return a.functionName < b.functionName;
+    });
+    for (int i = 0; i < sortedActual.size(); ++i) {
+      EXPECT_EQ(sortedActual[i].functionName, sortedExpected[i].functionName);
+      for (int j = 0; j < sortedActual[i].signatures.size(); ++j) {
         EXPECT_EQ(
-            actual[i].signatures[j]->toString(), expected[i].signatures[j]);
+            sortedActual[i].signatures[j]->toString(), sortedExpected[i].signatures[j]);
       }
     }
   }

@@ -134,6 +134,10 @@ TEST_F(SimpleFunctionPresetNullsTest, boolOutput) {
   test<bool>();
 }
 
+#ifndef _MSC_VER
+// MSVC eagerly instantiates all template methods of SimpleVector<Varchar>
+// and SimpleVector<Array<T>>, causing compile errors for methods that
+// assume T is a primitive type (e.g., toString, hashValueAt).
 TEST_F(SimpleFunctionPresetNullsTest, stringOutput) {
   test<Varchar>();
 }
@@ -141,5 +145,6 @@ TEST_F(SimpleFunctionPresetNullsTest, stringOutput) {
 TEST_F(SimpleFunctionPresetNullsTest, arrayOutput) {
   test<Array<int64_t>>();
 }
+#endif
 } // namespace
 } // namespace facebook::velox

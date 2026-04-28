@@ -35,11 +35,22 @@
 #include <algorithm>
 #include <map>
 #include <optional>
+#include <stdexcept>
 
 #include "velox/external/date/date.h"
 #include "velox/external/date/tz.h"
 #include "velox/external/tzdb/time_zone_private.h"
 #include "velox/external/tzdb/types_private.h"
+
+// std::__throw_runtime_error is a libstdc++/libc++ internal. Provide a
+// portable shim for MSVC where this symbol does not exist.
+#ifdef _MSC_VER
+namespace std {
+[[noreturn]] inline void __throw_runtime_error(const char* msg) {
+  throw std::runtime_error(msg);
+}
+} // namespace std
+#endif
 
 namespace facebook::velox::tzdb {
 
@@ -295,40 +306,40 @@ class __named_rule_until {
 
 [[nodiscard]] static std::chrono::seconds __at_to_seconds(
     std::chrono::seconds __stdoff,
-    const __rule& __rule) {
-  switch (__rule.__at.__clock) {
+    const __rule& __r) {
+  switch (__r.__at.__clock) {
     case facebook::velox::tzdb::__clock::__local:
       // Local time and standard time behave the same. This is not
       // correct. Local time needs to adjust for the current saved time.
       // To know the saved time the rules need to be known and sorted.
       // This needs a time so to avoid the chicken and egg adjust the
       // saving of the local time later.
-      return __rule.__at.__time - __stdoff;
+      return __r.__at.__time - __stdoff;
 
     case facebook::velox::tzdb::__clock::__universal:
-      return __rule.__at.__time;
+      return __r.__at.__time;
 
     case facebook::velox::tzdb::__clock::__standard:
-      return __rule.__at.__time - __stdoff;
+      return __r.__at.__time - __stdoff;
   }
   throw std::runtime_error("unreachable");
 }
 
 [[nodiscard]] static date::sys_seconds __from_to_sys_seconds(
     std::chrono::seconds __stdoff,
-    const __rule& __rule,
+    const __rule& __r,
     date::year __year) {
   date::year_month_day __ymd =
-      __to_year_month_day(__year, __rule.__in, __rule.__on);
+      __to_year_month_day(__year, __r.__in, __r.__on);
 
-  std::chrono::seconds __at = __at_to_seconds(__stdoff, __rule);
+  std::chrono::seconds __at = __at_to_seconds(__stdoff, __r);
   return __to_sys_seconds(__ymd, __at);
 }
 
 [[nodiscard]] static date::sys_seconds __from_to_sys_seconds(
     std::chrono::seconds __stdoff,
-    const __rule& __rule) {
-  return __from_to_sys_seconds(__stdoff, __rule, __rule.__from);
+    const __rule& __r) {
+  return __from_to_sys_seconds(__stdoff, __r, __r.__from);
 }
 
 [[nodiscard]] static const std::vector<__rule>& __get_rules(
@@ -358,12 +369,12 @@ class __named_rule_until {
 // This function implements case 2.
 [[nodiscard]] static std::string __letters_before_first_rule(
     const std::vector<__rule>& __rules) {
-  for (const auto& __rule : __rules) {
-    if (__rule.__save.__time != 0s) {
+  for (const auto& __r : __rules) {
+    if (__r.__save.__time != 0s) {
       continue;
     }
 
-    return __rule.__letters;
+    return __r.__letters;
   }
 
   std::__throw_runtime_error("corrupt tzdb: rule has zero entries");
@@ -408,8 +419,8 @@ class __named_rule_until {
         __next_end, // The end used when SAVE == 0s the times are merged
     const facebook::velox::tzdb::__continuation& __continuation,
     const std::vector<__rule>& __rules,
-    std::vector<__rule>::const_iterator __rule) {
-  if (__rule->__save.__time != 0s)
+    std::vector<__rule>::const_iterator __r) {
+  if (__r->__save.__time != 0s)
     return __get_sys_info_before_first_rule(
         __begin, __rule_end, __continuation, __rules);
 
@@ -418,22 +429,22 @@ class __named_rule_until {
       __next_end,
       __continuation.__stdoff,
       0min,
-      __format(__continuation, __rule->__letters, 0s)};
+      __format(__continuation, __r->__letters, 0s)};
 }
 
 [[nodiscard]] static std::chrono::seconds __at_to_seconds(
     std::chrono::seconds __stdoff,
     std::chrono::seconds __save,
-    const __rule& __rule) {
-  switch (__rule.__at.__clock) {
+    const __rule& __r) {
+  switch (__r.__at.__clock) {
     case facebook::velox::tzdb::__clock::__local:
-      return __rule.__at.__time - __stdoff - __save;
+      return __r.__at.__time - __stdoff - __save;
 
     case facebook::velox::tzdb::__clock::__universal:
-      return __rule.__at.__time;
+      return __r.__at.__time;
 
     case facebook::velox::tzdb::__clock::__standard:
-      return __rule.__at.__time - __stdoff;
+      return __r.__at.__time - __stdoff;
   }
   throw std::runtime_error("unreachable");
 }
@@ -441,12 +452,12 @@ class __named_rule_until {
 [[nodiscard]] static date::sys_seconds __rule_to_sys_seconds(
     std::chrono::seconds __stdoff,
     std::chrono::seconds __save,
-    const __rule& __rule,
+    const __rule& __r,
     date::year __year) {
   date::year_month_day __ymd =
-      __to_year_month_day(__year, __rule.__in, __rule.__on);
+      __to_year_month_day(__year, __r.__in, __r.__on);
 
-  std::chrono::seconds __at = __at_to_seconds(__stdoff, __save, __rule);
+  std::chrono::seconds __at = __at_to_seconds(__stdoff, __save, __r);
   return __to_sys_seconds(__ymd, __at);
 }
 
@@ -547,8 +558,8 @@ class __named_rule_until {
     date::sys_seconds __continuation_begin,
     const facebook::velox::tzdb::__continuation& __continuation,
     const std::vector<__rule>& __rules) {
-  auto __rule = __first_rule(__continuation.__stdoff, __rules);
-  if (__rule == __rules.end()) {
+  auto __cur_rule = __first_rule(__continuation.__stdoff, __rules);
+  if (__cur_rule == __rules.end()) {
     throw std::runtime_error("the set of rules has no first rule");
   }
 
@@ -556,7 +567,7 @@ class __named_rule_until {
   __time = std::max(__time, __continuation_begin);
 
   date::sys_seconds __rule_begin =
-      __from_to_sys_seconds(__continuation.__stdoff, *__rule);
+      __from_to_sys_seconds(__continuation.__stdoff, *__cur_rule);
 
   // The time sought is very likely inside the current rule.
   // When the continuation's UNTIL uses the local clock there are edge cases
@@ -569,9 +580,9 @@ class __named_rule_until {
   auto __next = __next_rule(
       __rule_begin,
       __continuation.__stdoff,
-      __rule->__save.__time,
+      __cur_rule->__save.__time,
       __rules,
-      __rule);
+      __cur_rule);
 
   // Ignore small steps, this happens with America/Punta_Arenas for the
   // transition
@@ -592,7 +603,7 @@ class __named_rule_until {
   //   [1927-09-01 04:42:45, 1927-09-01 05:00:00) -05:00:00 0min -05
 
   if (date::sys_seconds __begin =
-          __rule->__save.__time != 0s ? __rule_begin : __next.first;
+          __cur_rule->__save.__time != 0s ? __rule_begin : __next.first;
       __time < __begin) {
     if (__continuation_begin == date::sys_seconds::min() ||
         __begin - __continuation_begin > 12h)
@@ -603,7 +614,7 @@ class __named_rule_until {
               __next.first,
               __continuation,
               __rules,
-              __rule),
+              __cur_rule),
           false};
 
     // Europe/Berlin
@@ -616,7 +627,7 @@ class __named_rule_until {
     //
     // When C2 becomes active the time would be before the first rule R2,
     // giving a 1 hour sys_info.
-    std::chrono::seconds __save = __rule->__save.__time;
+    std::chrono::seconds __save = __cur_rule->__save.__time;
     __named_rule_until __continuation_end{__continuation};
     date::sys_seconds __sys_info_end =
         std::min(__continuation_end(__save), __next.first);
@@ -627,26 +638,26 @@ class __named_rule_until {
             __sys_info_end,
             __continuation.__stdoff + __save,
             std::chrono::duration_cast<std::chrono::minutes>(__save),
-            __format(__continuation, __rule->__letters, __save)},
+            __format(__continuation, __cur_rule->__letters, __save)},
         __sys_info_end == __continuation_end(__save)};
   }
 
   // See above for America/Asuncion
-  if (__rule->__save.__time == 0s && __time < __next.first) {
+  if (__cur_rule->__save.__time == 0s && __time < __next.first) {
     return __sys_info{
         sys_info{
             __continuation_begin,
             __next.first,
             __continuation.__stdoff,
             0min,
-            __format(__continuation, __rule->__letters, 0s)},
+            __format(__continuation, __cur_rule->__letters, 0s)},
         false};
   }
 
-  if (__rule->__save.__time != 0s) {
+  if (__cur_rule->__save.__time != 0s) {
     // another fix for America/Punta_Arenas when not at the start of the
     // sys_info object.
-    std::chrono::seconds __save = __rule->__save.__time;
+    std::chrono::seconds __save = __cur_rule->__save.__time;
     if (__continuation_begin >= __rule_begin - __save &&
         __time < __next.first) {
       return __sys_info{
@@ -655,7 +666,7 @@ class __named_rule_until {
               __next.first,
               __continuation.__stdoff + __save,
               std::chrono::duration_cast<std::chrono::minutes>(__save),
-              __format(__continuation, __rule->__letters, __save)},
+              __format(__continuation, __cur_rule->__letters, __save)},
           false};
     }
   }
@@ -714,7 +725,7 @@ class __named_rule_until {
       // We use 1 year ago to be conservative and because it simplifies
       // things (we only need to look at transitions in that year).
       date::year transitionYear = date::year_month_day{std::chrono::floor<date::days>(__time)}.year() - date::years(1);
-      date::sys_seconds firstTransition = 
+      date::sys_seconds firstTransition =
             __rule_to_sys_seconds(__continuation.__stdoff, std::get<1>(foreverRules)->__save.__time, *std::get<0>(foreverRules), transitionYear);
       date::sys_seconds secondTransition =
             __rule_to_sys_seconds(__continuation.__stdoff, std::get<0>(foreverRules)->__save.__time, *std::get<1>(foreverRules), transitionYear);
@@ -726,30 +737,30 @@ class __named_rule_until {
       // This effectively skips us ahead to ~2 years prior to our target
       // time.
       if (firstTransition < secondTransition) {
-        __rule = std::get<0>(foreverRules);
+        __cur_rule = std::get<0>(foreverRules);
         __rule_begin = firstTransition;
         __next = __next_rule(
           __rule_begin,
           __continuation.__stdoff,
-          __rule->__save.__time,
+          __cur_rule->__save.__time,
           __rules,
-          __rule);
+          __cur_rule);
       } else {
-        __rule = std::get<1>(foreverRules);
+        __cur_rule = std::get<1>(foreverRules);
         __rule_begin = secondTransition;
         __next = __next_rule(
           __rule_begin,
           __continuation.__stdoff,
-          __rule->__save.__time,
+          __cur_rule->__save.__time,
           __rules,
-          __rule);
+          __cur_rule);
       }
     }
   }
 
   __named_rule_until __continuation_end{__continuation};
   while (__next.second != __rules.end()) {
-    date::sys_seconds __end = __continuation_end(__rule->__save.__time);
+    date::sys_seconds __end = __continuation_end(__cur_rule->__save.__time);
 
     date::sys_seconds __sys_info_begin =
         std::max(__continuation_begin, __rule_begin);
@@ -781,14 +792,14 @@ class __named_rule_until {
       // Looking at the zdump like output in libc++ this generates jumps in
       // the UTC time.
 
-      __rule = __next.second;
+      __cur_rule = __next.second;
       __next = __next_rule(
           __next.first,
           __continuation.__stdoff,
-          __rule->__save.__time,
+          __cur_rule->__save.__time,
           __rules,
-          __rule);
-      __end = __continuation_end(__rule->__save.__time);
+          __cur_rule);
+      __end = __continuation_end(__cur_rule->__save.__time);
       __sys_info_end = std::min(__end, __next.first);
     }
 
@@ -801,32 +812,32 @@ class __named_rule_until {
           sys_info{
               __sys_info_begin,
               __sys_info_end,
-              __continuation.__stdoff + __rule->__save.__time,
+              __continuation.__stdoff + __cur_rule->__save.__time,
               std::chrono::duration_cast<std::chrono::minutes>(
-                  __rule->__save.__time),
+                  __cur_rule->__save.__time),
               __format(
-                  __continuation, __rule->__letters, __rule->__save.__time)},
+                  __continuation, __cur_rule->__letters, __cur_rule->__save.__time)},
           __sys_info_end == __end};
     }
 
     __rule_begin = __next.first;
-    __rule = __next.second;
+    __cur_rule = __next.second;
     __next = __next_rule(
         __rule_begin,
         __continuation.__stdoff,
-        __rule->__save.__time,
+        __cur_rule->__save.__time,
         __rules,
-        __rule);
+        __cur_rule);
   }
 
   return __sys_info{
       sys_info{
           std::max(__continuation_begin, __rule_begin),
-          __continuation_end(__rule->__save.__time),
-          __continuation.__stdoff + __rule->__save.__time,
+          __continuation_end(__cur_rule->__save.__time),
+          __continuation.__stdoff + __cur_rule->__save.__time,
           std::chrono::duration_cast<std::chrono::minutes>(
-              __rule->__save.__time),
-          __format(__continuation, __rule->__letters, __rule->__save.__time)},
+              __cur_rule->__save.__time),
+          __format(__continuation, __cur_rule->__letters, __cur_rule->__save.__time)},
       true};
 }
 

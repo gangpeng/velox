@@ -54,7 +54,11 @@ class DecimalUtilTest : public testing::Test {
 TEST_F(DecimalUtilTest, divideWithRoundUp) {
   testDivideWithRoundUp<int64_t, int64_t, int64_t>(60, 30, 3, 2000, false);
   testDivideWithRoundUp<int64_t, int64_t, int64_t>(
-      6, velox::DecimalUtil::kPowersOfTen[17], 20, 6000, false);
+      6,
+      static_cast<int64_t>(velox::DecimalUtil::kPowersOfTen[17]),
+      20,
+      6000,
+      false);
 }
 
 TEST_F(DecimalUtilTest, minLeadingZeros) {

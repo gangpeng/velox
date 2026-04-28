@@ -560,7 +560,7 @@ DEBUG_ONLY_TEST_P(SharedArbitrationTestWithThreadingModes, reclaimToOrderBy) {
     folly::EventCount taskPauseWait;
     auto taskPauseWaitKey = taskPauseWait.prepareWait();
 
-    const auto fakeAllocationSize = kMemoryCapacity - (32L << 20);
+    const auto fakeAllocationSize = kMemoryCapacity - (32LL << 20);
 
     std::atomic<bool> injectAllocationOnce{true};
     fakeOperatorFactory_->setAllocationCallback([&](Operator* op) {
@@ -663,7 +663,7 @@ DEBUG_ONLY_TEST_P(
     folly::EventCount taskPauseWait;
     auto taskPauseWaitKey = taskPauseWait.prepareWait();
 
-    const auto fakeAllocationSize = kMemoryCapacity - (32L << 20);
+    const auto fakeAllocationSize = kMemoryCapacity - (32LL << 20);
 
     std::atomic<bool> injectAllocationOnce{true};
     fakeOperatorFactory_->setAllocationCallback([&](Operator* op) {
@@ -767,7 +767,7 @@ DEBUG_ONLY_TEST_P(
     folly::EventCount taskPauseWait;
     auto taskPauseWaitKey = taskPauseWait.prepareWait();
 
-    const auto fakeAllocationSize = kMemoryCapacity - (2L << 20);
+    const auto fakeAllocationSize = kMemoryCapacity - (2LL << 20);
 
     std::atomic<bool> injectAllocationOnce{true};
     fakeOperatorFactory_->setAllocationCallback([&](Operator* op) {

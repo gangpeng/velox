@@ -277,6 +277,9 @@ TEST_F(DateTimeFunctionsTest, fromUnixtimeRountTrip) {
 }
 
 TEST_F(DateTimeFunctionsTest, fromUnixtimeWithTimeZone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto fromUnixtime = [&](std::optional<double> timestamp,
                                 std::optional<std::string> timezoneName) {
     return TimestampWithTimezone::unpack(
@@ -393,6 +396,9 @@ TEST_F(DateTimeFunctionsTest, fromUnixtime) {
 }
 
 TEST_F(DateTimeFunctionsTest, year) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto year = [&](std::optional<Timestamp> date) {
     return evaluateOnce<int64_t>("year(c0)", date);
   };
@@ -557,6 +563,9 @@ TEST_F(DateTimeFunctionsTest, weekTimestampWithTimezone) {
 }
 
 TEST_F(DateTimeFunctionsTest, quarter) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto quarter = [&](std::optional<Timestamp> date) {
     return evaluateOnce<int64_t>("quarter(c0)", date);
   };
@@ -625,6 +634,9 @@ TEST_F(DateTimeFunctionsTest, quarterTimestampWithTimezone) {
 }
 
 TEST_F(DateTimeFunctionsTest, month) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto month = [&](std::optional<Timestamp> date) {
     return evaluateOnce<int64_t>("month(c0)", date);
   };
@@ -690,6 +702,9 @@ TEST_F(DateTimeFunctionsTest, monthTimestampWithTimezone) {
 }
 
 TEST_F(DateTimeFunctionsTest, hour) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto hour = [&](std::optional<Timestamp> date) {
     return evaluateOnce<int64_t>("hour(c0)", date);
   };
@@ -793,6 +808,9 @@ TEST_F(DateTimeFunctionsTest, hourTime) {
 }
 
 TEST_F(DateTimeFunctionsTest, dayOfMonth) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto day = [&](std::optional<Timestamp> date) {
     return evaluateOnce<int64_t>("day_of_month(c0)", date);
   };
@@ -924,6 +942,9 @@ TEST_F(DateTimeFunctionsTest, plusMinusDateIntervalDayTime) {
 }
 
 TEST_F(DateTimeFunctionsTest, timestampMinusIntervalYearMonth) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto minus = [&](std::optional<std::string> timestamp,
                          std::optional<int32_t> interval) {
     return evaluateOnce<std::string>(
@@ -952,6 +973,9 @@ TEST_F(DateTimeFunctionsTest, timestampMinusIntervalYearMonth) {
 }
 
 TEST_F(DateTimeFunctionsTest, timestampPlusIntervalYearMonth) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto plus = [&](std::optional<std::string> timestamp,
                         std::optional<int32_t> interval) {
     // timestamp + interval.
@@ -1070,6 +1094,9 @@ TEST_F(DateTimeFunctionsTest, plusMinusTimestampIntervalDayTime) {
 }
 
 TEST_F(DateTimeFunctionsTest, timestampWithTimeZonePlusIntervalDayTime) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   auto test = [&](const std::string& timestamp, int64_t interval) {
     // ts + interval == interval + ts == ts - (-interval) ==
     // date_add('millisecond', interval, ts).
@@ -1489,6 +1516,9 @@ TEST_F(DateTimeFunctionsTest, timeIntervalYearMonthVectorOptimizations) {
 }
 
 TEST_F(DateTimeFunctionsTest, minusTimestampWithTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   auto minus = [&](const std::string& a, const std::string& b) {
     const auto sql =
         "cast(c0 as timestamp with time zone) - cast(c1 as timestamp with time zone)";
@@ -1560,6 +1590,9 @@ TEST_F(DateTimeFunctionsTest, dayOfMonthTimestampWithTimezone) {
 }
 
 TEST_F(DateTimeFunctionsTest, dayOfWeek) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto day = [&](std::optional<Timestamp> date) {
     return evaluateOnce<int64_t>("day_of_week(c0)", date);
   };
@@ -1633,6 +1666,9 @@ TEST_F(DateTimeFunctionsTest, dayOfWeekTimestampWithTimezone) {
 }
 
 TEST_F(DateTimeFunctionsTest, dayOfYear) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto day = [&](std::optional<Timestamp> date) {
     return evaluateOnce<int64_t>("day_of_year(c0)", date);
   };
@@ -1700,6 +1736,9 @@ TEST_F(DateTimeFunctionsTest, dayOfYearTimestampWithTimezone) {
 }
 
 TEST_F(DateTimeFunctionsTest, yearOfWeek) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto yow = [&](std::optional<Timestamp> date) {
     return evaluateOnce<int64_t>("year_of_week(c0)", date);
   };
@@ -1775,6 +1814,9 @@ TEST_F(DateTimeFunctionsTest, yearOfWeekTimestampWithTimezone) {
 }
 
 TEST_F(DateTimeFunctionsTest, minute) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto minute = [&](std::optional<Timestamp> date) {
     return evaluateOnce<int64_t>("minute(c0)", date);
   };
@@ -2253,6 +2295,9 @@ TEST_F(DateTimeFunctionsTest, extractFromIntervalYearMonth) {
 }
 
 TEST_F(DateTimeFunctionsTest, dateTrunc) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto dateTrunc = [&](const std::string& unit,
                              std::optional<Timestamp> timestamp) {
     return evaluateOnce<Timestamp>(
@@ -2555,6 +2600,9 @@ TEST_F(DateTimeFunctionsTest, dateTruncTimeStampWithTimezoneStringForWeek) {
       "week", "2024-03-01+23:01:02+14:00", "2024-02-26+00:00:00+14:00");
 }
 TEST_F(DateTimeFunctionsTest, dateTruncTimestampWithTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto evaluateDateTrunc = [&](const std::string& truncUnit,
                                      int64_t inputTimestamp,
                                      const std::string& timeZone,
@@ -2771,6 +2819,9 @@ TEST_F(DateTimeFunctionsTest, dateAddDate) {
 }
 
 TEST_F(DateTimeFunctionsTest, dateAddTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto dateAdd = [&](const std::string& unit,
                            std::optional<int32_t> value,
                            std::optional<Timestamp> timestamp) {
@@ -3070,6 +3121,9 @@ TEST_F(DateTimeFunctionsTest, dateAddTimestamp) {
 }
 
 TEST_F(DateTimeFunctionsTest, dateAddTimestampWithTimeZone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   auto dateAdd =
       [&](std::optional<std::string> unit,
           std::optional<int32_t> value,
@@ -3456,6 +3510,9 @@ TEST_F(DateTimeFunctionsTest, dateDiffDate) {
 }
 
 TEST_F(DateTimeFunctionsTest, dateDiffTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto dateDiff = [&](const std::string& unit,
                             std::optional<Timestamp> timestamp1,
                             std::optional<Timestamp> timestamp2) {
@@ -3734,6 +3791,9 @@ TEST_F(DateTimeFunctionsTest, dateDiffTimestamp) {
 }
 
 TEST_F(DateTimeFunctionsTest, dateDiffTimestampWithTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto dateDiff = [&](std::optional<std::string> unit,
                             std::optional<TimestampWithTimezone> input1,
                             std::optional<TimestampWithTimezone> input2) {
@@ -4034,6 +4094,9 @@ TEST_F(DateTimeFunctionsTest, parseDatetimeRoundtrip) {
 }
 
 TEST_F(DateTimeFunctionsTest, parseDatetime) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto parseDatetime = [&](const std::optional<std::string>& input,
                                  const std::optional<std::string>& format) {
     auto result =
@@ -4210,6 +4273,9 @@ TEST_F(DateTimeFunctionsTest, parseDatetime) {
 }
 
 TEST_F(DateTimeFunctionsTest, formatDateTime) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto formatDatetime = [&](std::optional<Timestamp> timestamp,
                                   std::optional<std::string> format) {
     return evaluateOnce<std::string>(
@@ -4649,6 +4715,9 @@ TEST_F(DateTimeFunctionsTest, formatDateTime) {
 }
 
 TEST_F(DateTimeFunctionsTest, formatDateTimeTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto formatDatetimeWithTimezone =
       [&](std::optional<TimestampWithTimezone> timestampWithTimezone,
           std::optional<std::string> format) {
@@ -4693,6 +4762,9 @@ TEST_F(DateTimeFunctionsTest, formatDateTimeTimezone) {
 }
 
 TEST_F(DateTimeFunctionsTest, dateFormat) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto dateFormat = [&](std::optional<Timestamp> timestamp,
                               std::optional<std::string> format) {
     return evaluateOnce<std::string>("date_format(c0, c1)", timestamp, format);
@@ -5040,6 +5112,9 @@ TEST_F(DateTimeFunctionsTest, fromIso8601Date) {
 }
 
 TEST_F(DateTimeFunctionsTest, fromIso8601Timestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto fromIso = [&](const std::string& input) {
     auto result =
         evaluateOnce<int64_t, std::string>("from_iso8601_timestamp(c0)", input);
@@ -5330,6 +5405,9 @@ TEST_F(DateTimeFunctionsTest, dateParseMonthOfYearText) {
 }
 
 TEST_F(DateTimeFunctionsTest, dateParse) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto dateParse = [&](std::optional<std::string> input,
                              std::optional<std::string> format) {
     return evaluateOnce<Timestamp>("date_parse(c0, c1)", input, format);
@@ -5456,6 +5534,9 @@ TEST_F(DateTimeFunctionsTest, dateFunctionTimestamp) {
 }
 
 TEST_F(DateTimeFunctionsTest, dateFunctionTimestampWithTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   static const int64_t kSecondsInDay = 86'400;
 
   const auto dateFunction =
@@ -5560,6 +5641,9 @@ TEST_F(DateTimeFunctionsTest, dateFunctionTimestampWithTimezone) {
 }
 
 TEST_F(DateTimeFunctionsTest, castDateForDateFunction) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   setQueryTimeZone("America/Los_Angeles");
 
   static const int64_t kSecondsInDay = 86'400;
@@ -5616,6 +5700,9 @@ TEST_F(DateTimeFunctionsTest, castDateForDateFunction) {
 }
 
 TEST_F(DateTimeFunctionsTest, currentDateWithTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   // Since the execution of the code is slightly delayed, it is difficult for us
   // to get the correct value of current_date. If you compare directly based on
   // the current time, you may get wrong result at the last second of the day,
@@ -5653,6 +5740,9 @@ TEST_F(DateTimeFunctionsTest, currentDateWithoutTimezone) {
 }
 
 TEST_F(DateTimeFunctionsTest, timeZoneHour) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto timezone_hour = [&](const char* time, const char* timezone) {
     Timestamp ts = parseTimestamp(time);
     auto timestamp = ts.toMillis();
@@ -5696,6 +5786,9 @@ TEST_F(DateTimeFunctionsTest, timeZoneHour) {
 }
 
 TEST_F(DateTimeFunctionsTest, timeZoneMinute) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto timezone_minute = [&](const char* time, const char* timezone) {
     Timestamp ts = parseTimestamp(time);
     auto timestamp = ts.toMillis();
@@ -6007,6 +6100,9 @@ TEST_F(DateTimeFunctionsTest, timeWithTimezoneComparisons) {
 }
 
 TEST_F(DateTimeFunctionsTest, castDateToTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const int64_t kSecondsInDay = kMillisInDay / 1'000;
   const auto castDateToTimestamp = [&](const std::optional<int32_t> date) {
     return evaluateOnce<Timestamp>("cast(c0 AS timestamp)", DATE(), date);
@@ -6099,6 +6195,9 @@ TEST_F(DateTimeFunctionsTest, lastDayOfMonthDate) {
 }
 
 TEST_F(DateTimeFunctionsTest, lastDayOfMonthTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto lastDayFunc = [&](const std::optional<Timestamp>& date) {
     return evaluateOnce<int32_t>("last_day_of_month(c0)", date);
   };
@@ -6194,6 +6293,9 @@ TEST_F(DateTimeFunctionsTest, toISO8601Date) {
 }
 
 TEST_F(DateTimeFunctionsTest, toISO8601Timestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto toIso = [&](const char* timestamp) {
     return evaluateOnce<std::string>(
         "to_iso8601(c0)", std::make_optional(parseTimestamp(timestamp)));
@@ -6222,6 +6324,9 @@ TEST_F(DateTimeFunctionsTest, toISO8601Timestamp) {
 }
 
 TEST_F(DateTimeFunctionsTest, toISO8601TimestampWithTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto toIso = [&](const char* timestamp, const char* timezone) {
     const auto* timeZone = tz::locateZone(timezone);
     auto ts = parseTimestamp(timestamp);
@@ -6256,6 +6361,9 @@ TEST_F(DateTimeFunctionsTest, toISO8601TimestampWithTimezone) {
 }
 
 TEST_F(DateTimeFunctionsTest, atTimezoneTest) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto at_timezone = [&](std::optional<int64_t> timestampWithTimezone,
                                std::optional<std::string> targetTimezone) {
     return evaluateOnce<int64_t>(
@@ -6597,6 +6705,9 @@ TEST_F(DateTimeFunctionsTest, xxHash64FunctionTime) {
 }
 
 TEST_F(DateTimeFunctionsTest, currentTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   const auto callCurrentTimestamp =
       [&](int64_t sessionStartTime,
           const std::optional<std::string>& timeZone) {
@@ -7077,6 +7188,9 @@ TEST_F(DateTimeFunctionsTest, dateAddDateVariableUnit) {
 }
 
 TEST_F(DateTimeFunctionsTest, currentTime) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   auto testCurrentTime = [&](int64_t sessionStartTime,
                              const std::string& zone,
                              int64_t expectedMillis,

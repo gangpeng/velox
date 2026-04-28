@@ -388,7 +388,11 @@ inline cppType IntDecoder<isSigned>::readLittleEndianFromBigEndian() {
   for (uint32_t i = 0; i < numBytes_; ++i) {
     b = readByte();
     if constexpr (sizeof(cppType) == 16) {
+#ifdef _MSC_VER
+      numBytesBigEndian |= (b & INT128_BASE_256_MASK) << static_cast<int>(offset);
+#else
       numBytesBigEndian |= (b & INT128_BASE_256_MASK) << offset;
+#endif
     } else {
       numBytesBigEndian |= (b & BASE_256_MASK) << offset;
     }
@@ -464,7 +468,7 @@ inline int128_t IntDecoder<isSigned>::readInt96() {
   int128_t result = 0;
   for (int i = 0; i < 12; ++i) {
     auto ch = readByte();
-    result |= static_cast<uint128_t>(ch & BASE_256_MASK) << (i * 8);
+    result |= static_cast<int128_t>(static_cast<uint128_t>(ch & BASE_256_MASK) << (i * 8));
   }
   return result;
 }
@@ -480,7 +484,7 @@ inline T IntDecoder<isSigned>::readVInt() {
     }
   } else {
     if constexpr (std::is_same_v<T, int128_t>) {
-      return readVuHugeInt();
+      return static_cast<int128_t>(readVuHugeInt());
     } else {
       return readVuLong();
     }

@@ -133,11 +133,21 @@ class LocalFileSystem : public FileSystem {
 
   void remove(std::string_view path) override {
     auto file = extractPath(path);
+#ifdef _WIN32
+    // On Windows, C's remove() doesn't work on directories.
+    std::error_code ec;
+    std::filesystem::remove(std::filesystem::path(std::string(file)), ec);
+    if (ec && std::filesystem::exists(file)) {
+      VELOX_USER_FAIL(
+          "Failed to delete file {} with errno {}", file, ec.message());
+    }
+#else
     int32_t rc = std::remove(std::string(file).c_str());
     if (rc < 0 && std::filesystem::exists(file)) {
       VELOX_USER_FAIL(
           "Failed to delete file {} with errno {}", file, strerror(errno));
     }
+#endif
     VLOG(1) << "LocalFileSystem::remove " << path;
   }
 
@@ -155,6 +165,29 @@ class LocalFileSystem : public FileSystem {
           newFile);
       return;
     }
+#ifdef _WIN32
+    // The Windows CRT rename does not replace an existing target. Match the
+    // FileSystem overwrite contract explicitly before issuing the rename.
+    std::error_code ec;
+    if (overwrite) {
+      std::filesystem::remove(newFile, ec);
+      if (ec && std::filesystem::exists(newFile)) {
+        VELOX_USER_FAIL(
+            "Failed to remove file {} before rename with error {}",
+            newFile,
+            ec.message());
+      }
+      ec.clear();
+    }
+    std::filesystem::rename(oldFile, newFile, ec);
+    if (ec) {
+      VELOX_USER_FAIL(
+          "Failed to rename file {} to {} with error {}",
+          oldFile,
+          newFile,
+          ec.message());
+    }
+#else
     int32_t rc =
         ::rename(std::string(oldFile).c_str(), std::string(newFile).c_str());
     if (rc != 0) {
@@ -164,6 +197,7 @@ class LocalFileSystem : public FileSystem {
           newFile,
           folly::errnoStr(errno));
     }
+#endif
     VLOG(1) << "LocalFileSystem::rename oldFile: " << oldFile
             << ", newFile:" << newFile;
   }
@@ -183,15 +217,19 @@ class LocalFileSystem : public FileSystem {
     const std::filesystem::path folder{directoryPath};
     std::vector<std::string> filePaths;
     for (auto const& entry : std::filesystem::directory_iterator{folder}) {
-      filePaths.push_back(entry.path());
+      auto filePath = entry.path().string();
+#ifdef _WIN32
+      std::replace(filePath.begin(), filePath.end(), '\\', '/');
+#endif
+      filePaths.push_back(std::move(filePath));
     }
     return filePaths;
   }
 
   void mkdir(std::string_view path, const DirectoryOptions& options) override {
     std::error_code ec;
-
-    const bool created = std::filesystem::create_directories(path, ec);
+    const auto dirPath = extractPath(path);
+    const bool created = std::filesystem::create_directories(dirPath, ec);
     // This API is unlike POSIX for mkdir when the directory already exists
     // because in POSIX, the error_code will return EEXIST, but in this API, the
     // error_code will return 0. The indication for whether or not a directory
@@ -215,7 +253,7 @@ class LocalFileSystem : public FileSystem {
 
   void rmdir(std::string_view path) override {
     std::error_code ec;
-    std::filesystem::remove_all(path, ec);
+    std::filesystem::remove_all(extractPath(path), ec);
     VELOX_CHECK_EQ(
         0,
         ec.value(),
@@ -229,8 +267,10 @@ class LocalFileSystem : public FileSystem {
   static std::function<bool(std::string_view)> schemeMatcher() {
     // Note: presto behavior is to prefix local paths with 'file:'.
     // Check for that prefix and prune to absolute regular paths as needed.
+    // On Windows, also match drive-letter absolute paths (e.g. C:\... or C:/...).
     return [](std::string_view filePath) {
-      return filePath.starts_with('/') || filePath.starts_with(kFileScheme);
+      return filePath.starts_with('/') || filePath.starts_with(kFileScheme) ||
+          (filePath.length() >= 2 && filePath[1] == ':');
     };
   }
 

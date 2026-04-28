@@ -23,13 +23,13 @@ using namespace facebook::velox;
 
 namespace {
 void testBasic(int128_t hugeInt, uint64_t upper, uint64_t lower) {
-  EXPECT_EQ(hugeInt, HugeInt::build(upper, lower));
+  EXPECT_TRUE(hugeInt == HugeInt::build(upper, lower));
   EXPECT_EQ(upper, HugeInt::upper(hugeInt));
   EXPECT_EQ(lower, HugeInt::lower(hugeInt));
 }
 
 void testParse(int128_t hugeInt, const std::string& hugeString) {
-  EXPECT_EQ(hugeInt, HugeInt::parse(hugeString));
+  EXPECT_TRUE(hugeInt == HugeInt::parse(hugeString));
   EXPECT_EQ(hugeString, std::to_string(hugeInt));
 }
 } // namespace
@@ -40,7 +40,10 @@ TEST(HugeIntTest, basic) {
   // 0xF{16}F{16} = -1
   auto uint64Max = static_cast<int128_t>(std::numeric_limits<uint64_t>::max());
   int128_t hugeInt = -1;
-  testBasic(hugeInt, uint64Max, uint64Max);
+  testBasic(
+      hugeInt,
+      static_cast<uint64_t>(uint64Max),
+      static_cast<uint64_t>(uint64Max));
 
   hugeInt = std::numeric_limits<int128_t>::max() - 0x12345;
   uint64_t upper = 0x7FFFFFFFFFFFFFFF;

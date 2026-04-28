@@ -16,6 +16,11 @@
 #pragma once
 
 #include "velox/common/base/Exceptions.h"
+// On MSVC (/permissive-), Parser::semantic_type must be visible before Scanner
+// is declared because Scanner::lex() has it as a parameter type. Include the
+// generated parser header here. It only forward-declares Scanner (via
+// %code requires), so there is no circular dependency.
+#include "velox/expression/type_calculation/TypeCalculation.yy.h"
 
 #include <cmath>
 #include <iostream>

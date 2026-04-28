@@ -367,6 +367,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
 # For C++20 support we need GNU GCC11 (or later versions) or Clang/AppleClang 15
 # (or later versions) to get support for the used features.
+# MSVC 19.29+ (VS 2019 16.11+) also supports C++20.
 if(
   NOT
     (
@@ -382,6 +383,11 @@ if(
           )
           AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15
         )
+      OR
+        (
+          "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC"
+          AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER_EQUAL 19.29
+        )
     )
 )
   message(
@@ -390,25 +396,46 @@ if(
   )
 endif()
 
-execute_process(
-  COMMAND
-    bash -c
-    "( source ${CMAKE_CURRENT_SOURCE_DIR}/scripts/setup-helper-functions.sh && echo -n $(get_cxx_flags $ENV{CPU_TARGET}))"
-  OUTPUT_VARIABLE SCRIPT_CXX_FLAGS
-  RESULT_VARIABLE COMMAND_STATUS
-)
+if(NOT MSVC)
+  execute_process(
+    COMMAND
+      bash -c
+      "( source ${CMAKE_CURRENT_SOURCE_DIR}/scripts/setup-helper-functions.sh && echo -n $(get_cxx_flags $ENV{CPU_TARGET}))"
+    OUTPUT_VARIABLE SCRIPT_CXX_FLAGS
+    RESULT_VARIABLE COMMAND_STATUS
+  )
 
-if(COMMAND_STATUS EQUAL "1")
-  message(FATAL_ERROR "Unable to determine compiler flags!")
+  if(COMMAND_STATUS EQUAL "1")
+    message(FATAL_ERROR "Unable to determine compiler flags!")
+  endif()
+  message("Setting CMAKE_CXX_FLAGS=${SCRIPT_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SCRIPT_CXX_FLAGS}")
+else()
+  # Windows/MSVC: choose a portable default instruction set. CheckCXXCompilerFlag
+  # only proves that cl.exe understands /arch:AVX2; it does not prove that the
+  # test host can execute AVX2 instructions. Keep AVX2 opt-in through
+  # CPU_TARGET=avx2 so Windows test binaries do not SIGILL on non-AVX2 hosts.
+  include(CheckCXXCompilerFlag)
+  if("$ENV{CPU_TARGET}" STREQUAL "avx2")
+    check_cxx_compiler_flag("/arch:AVX2" VELOX_MSVC_SUPPORTS_AVX2)
+    if(NOT VELOX_MSVC_SUPPORTS_AVX2)
+      message(FATAL_ERROR "CPU_TARGET=avx2 requires MSVC /arch:AVX2 support")
+    endif()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2")
+    add_compile_definitions(__AVX2__ __SSE4_2__ __SSE4_1__ __SSSE3__ __SSE3__ __SSE2__)
+    message("Setting CMAKE_CXX_FLAGS with /arch:AVX2 (MSVC CPU_TARGET=avx2)")
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
+    add_compile_definitions(__SSE4_2__ __SSE4_1__ __SSSE3__ __SSE3__ __SSE2__)
+    message("Setting CMAKE_CXX_FLAGS with /arch:SSE2 (MSVC portable default)")
+  endif()
 endif()
-message("Setting CMAKE_CXX_FLAGS=${SCRIPT_CXX_FLAGS}")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SCRIPT_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D USE_VELOX_COMMON_BASE")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D HAS_UNCAUGHT_EXCEPTIONS")
+add_compile_definitions(USE_VELOX_COMMON_BASE)
+add_compile_definitions(HAS_UNCAUGHT_EXCEPTIONS)
 if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsigned-char")
+  if(NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsigned-char")
+  endif()
 endif()
 
 # Under Ninja, we are able to designate certain targets large enough to require
@@ -424,50 +451,71 @@ if("${MAX_LINK_JOBS}")
   set(CMAKE_JOB_POOL_LINK link_job_pool)
 endif()
 
+if(MSVC)
+  # Windows headers define ERROR as a macro; glog's log_severity.h requires
+  # GLOG_NO_ABBREVIATED_SEVERITIES to avoid the conflict. Also define
+  # WIN32_LEAN_AND_MEAN and NOMINMAX to reduce Windows header pollution.
+  # NO_FIXED_STR_UDL disables folly/FixedString.h UDL macros that use token
+  # pasting incompatible with /Zc:preprocessor conformant mode.
+  # _USE_MATH_DEFINES exposes M_PI, M_E and other math constants from <cmath>.
+  add_compile_definitions(GLOG_NO_ABBREVIATED_SEVERITIES WIN32_LEAN_AND_MEAN NOMINMAX NO_FIXED_STR_UDL _USE_MATH_DEFINES)
+endif()
+
 if(ENABLE_ALL_WARNINGS)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(
-      KNOWN_COMPILER_SPECIFIC_WARNINGS
-      "-Wno-range-loop-analysis \
-         -Wno-mismatched-tags \
-         -Wno-nullability-completeness"
-    )
-  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(
-      KNOWN_COMPILER_SPECIFIC_WARNINGS
-      "-Wno-implicit-fallthrough \
-         -Wno-class-memaccess \
-         -Wno-comment \
-         -Wno-int-in-bool-context \
-         -Wno-redundant-move \
-         -Wno-array-bounds \
-         -Wno-maybe-uninitialized \
-         -Wno-unused-result \
-         -Wno-format-overflow \
-         -Wno-strict-aliasing"
-    )
-    # Avoid compiler bug for GCC 12.2.1
-    # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "12.2.1")
-      string(APPEND KNOWN_COMPILER_SPECIFIC_WARNINGS " -Wno-restrict")
+  if(MSVC)
+    # /Zc:preprocessor enables the conformant preprocessor required for
+    # __VA_OPT__ and correct ##__VA_ARGS__ comma-elision (used in Exceptions.h).
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /wd4200 /wd4244 /wd4267 /wd4305 /wd4996 /wd4068 /wd4141 /wd4324 /wd4456 /wd4457 /wd4458 /wd4459 /wd4702 /wd4838 /EHsc /bigobj /MP /Zc:preprocessor")
+    # Windows system libraries needed by libevent (BCryptGenRandom) and sockets.
+    link_libraries(Bcrypt Ws2_32 Crypt32)
+    # Increase the default stack size from 1MB to 8MB on MSVC. Some Velox code
+    # (and tests) use large stack frames that exceed the 1MB Windows default.
+    add_link_options("/STACK:8388608")
+  else()
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      set(
+        KNOWN_COMPILER_SPECIFIC_WARNINGS
+        "-Wno-range-loop-analysis \
+           -Wno-mismatched-tags \
+           -Wno-nullability-completeness"
+      )
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      set(
+        KNOWN_COMPILER_SPECIFIC_WARNINGS
+        "-Wno-implicit-fallthrough \
+           -Wno-class-memaccess \
+           -Wno-comment \
+           -Wno-int-in-bool-context \
+           -Wno-redundant-move \
+           -Wno-array-bounds \
+           -Wno-maybe-uninitialized \
+           -Wno-unused-result \
+           -Wno-format-overflow \
+           -Wno-strict-aliasing"
+      )
+      # Avoid compiler bug for GCC 12.2.1
+      # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "12.2.1")
+        string(APPEND KNOWN_COMPILER_SPECIFIC_WARNINGS " -Wno-restrict")
+      endif()
+      if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "14.0.0")
+        string(APPEND KNOWN_COMPILER_SPECIFIC_WARNINGS " -Wno-error=template-id-cdtor")
+        string(APPEND KNOWN_COMPILER_SPECIFIC_WARNINGS " -Wno-overloaded-virtual")
+        string(APPEND KNOWN_COMPILER_SPECIFIC_WARNINGS " -Wno-error=tautological-compare")
+      endif()
     endif()
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "14.0.0")
-      string(APPEND KNOWN_COMPILER_SPECIFIC_WARNINGS " -Wno-error=template-id-cdtor")
-      string(APPEND KNOWN_COMPILER_SPECIFIC_WARNINGS " -Wno-overloaded-virtual")
-      string(APPEND KNOWN_COMPILER_SPECIFIC_WARNINGS " -Wno-error=tautological-compare")
-    endif()
+
+    set(
+      KNOWN_WARNINGS
+      "-Wno-unused \
+         -Wno-unused-parameter \
+         -Wno-sign-compare \
+         -Wno-ignored-qualifiers \
+         ${KNOWN_COMPILER_SPECIFIC_WARNINGS}"
+    )
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra ${KNOWN_WARNINGS}")
   endif()
-
-  set(
-    KNOWN_WARNINGS
-    "-Wno-unused \
-       -Wno-unused-parameter \
-       -Wno-sign-compare \
-       -Wno-ignored-qualifiers \
-       ${KNOWN_COMPILER_SPECIFIC_WARNINGS}"
-  )
-
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra ${KNOWN_WARNINGS}")
 endif()
 
 if(VELOX_ENABLE_WAVE OR VELOX_ENABLE_CUDF)
@@ -541,10 +589,18 @@ if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
 endif()
 
 velox_set_source(ICU)
-velox_resolve_dependency(
-  ICU
-  COMPONENTS data i18n io uc tu
-)
+if(MSVC)
+  # vcpkg ICU does not ship the transliteration (tu) component.
+  velox_resolve_dependency(
+    ICU
+    COMPONENTS data i18n io uc
+  )
+else()
+  velox_resolve_dependency(
+    ICU
+    COMPONENTS data i18n io uc tu
+  )
+endif()
 
 set(
   BOOST_INCLUDE_LIBRARIES
@@ -644,13 +700,27 @@ if(${VELOX_BUILD_TESTING})
   velox_set_source(absl)
   velox_resolve_dependency(absl)
 
-  # 'gRPC_CARES_PROVIDER' is set as 'package', which means c-ares library needs
-  # to be installed on the system, instead of being built by gRPC.
-  velox_set_source(c-ares)
-  velox_resolve_dependency(c-ares)
+  if(NOT MSVC)
+    # gRPC 1.48.1 has MSVC constinit compatibility issues. Skip on Windows.
+    # 'gRPC_CARES_PROVIDER' is set as 'package', which means c-ares library needs
+    # to be installed on the system, instead of being built by gRPC.
+    velox_set_source(c-ares)
+    velox_resolve_dependency(c-ares)
 
-  velox_set_source(gRPC)
-  velox_resolve_dependency(gRPC)
+    velox_set_source(gRPC)
+    velox_resolve_dependency(gRPC)
+  else()
+    # Provide stub targets so CMakeLists that reference gRPC targets don't fail.
+    if(NOT TARGET gRPC::grpc)
+      add_library(grpc_stub INTERFACE)
+      add_library(gRPC::grpc ALIAS grpc_stub)
+      add_library(gRPC::grpc++ ALIAS grpc_stub)
+    endif()
+    if(NOT TARGET gRPC::grpc_cpp_plugin)
+      add_executable(grpc_cpp_plugin_stub "${CMAKE_SOURCE_DIR}/velox/common/base/grpc_stub_main.cpp")
+      add_executable(gRPC::grpc_cpp_plugin ALIAS grpc_cpp_plugin_stub)
+    endif()
+  endif()
 endif()
 
 if(VELOX_ENABLE_REMOTE_FUNCTIONS)
@@ -747,7 +817,11 @@ include_directories(.)
 # Adding this down here prevents warnings in dependencies from stopping the
 # build
 if("${TREAT_WARNINGS_AS_ERRORS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+  if(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX")
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+  endif()
 endif()
 
 message("FINAL CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}")

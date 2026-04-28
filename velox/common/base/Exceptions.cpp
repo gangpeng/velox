@@ -18,7 +18,11 @@
 
 namespace facebook::velox::detail {
 
+// MSVC does not support explicit instantiation of [[noreturn]] function
+// templates (C2893). On MSVC the templates are instantiated per-TU instead.
+#ifndef _MSC_VER
 DEFINE_CHECK_FAIL_TEMPLATES(::facebook::velox::VeloxRuntimeError);
 DEFINE_CHECK_FAIL_TEMPLATES(::facebook::velox::VeloxUserError);
+#endif
 
 } // namespace facebook::velox::detail

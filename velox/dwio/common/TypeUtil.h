@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include "velox/common/base/Portability.h"
+#include "velox/type/HugeInt.h"
+
 namespace facebook::velox::dwio::common {
 
 // Converts signed/unsigned int 16/32/64 and float/double to unsigned int of the

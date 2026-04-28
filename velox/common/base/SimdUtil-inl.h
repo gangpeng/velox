@@ -15,6 +15,20 @@
  */
 
 #include <numeric>
+#ifdef _MSC_VER
+#include <bit>
+// MSVC does not allow reinterpret_cast between Intel SIMD intrinsic types
+// (e.g. __m256i <-> __m256). Use std::bit_cast (C++20) instead.
+template <typename To, typename From>
+inline To velox_simd_cast(From from) {
+  return std::bit_cast<To>(from);
+}
+#else
+template <typename To, typename From>
+inline To velox_simd_cast(From from) {
+  return reinterpret_cast<To>(from);
+}
+#endif
 
 #if XSIMD_WITH_NEON
 namespace xsimd::types {
@@ -159,13 +173,13 @@ struct BitMask<T, A, 4> {
 
 #if XSIMD_WITH_AVX
   static int toBitMask(xsimd::batch_bool<T, A> mask, const xsimd::avx&) {
-    return _mm256_movemask_ps(reinterpret_cast<__m256>(mask.data));
+    return _mm256_movemask_ps(velox_simd_cast<__m256>(mask.data));
   }
 #endif
 
 #if XSIMD_WITH_SSE2
   static int toBitMask(xsimd::batch_bool<T, A> mask, const xsimd::sse2&) {
-    return _mm_movemask_ps(reinterpret_cast<__m128>(mask.data));
+    return _mm_movemask_ps(velox_simd_cast<__m128>(mask.data));
   }
 #endif
 
@@ -194,13 +208,13 @@ struct BitMask<T, A, 8> {
 
 #if XSIMD_WITH_AVX
   static int toBitMask(xsimd::batch_bool<T, A> mask, const xsimd::avx&) {
-    return _mm256_movemask_pd(reinterpret_cast<__m256d>(mask.data));
+    return _mm256_movemask_pd(velox_simd_cast<__m256d>(mask.data));
   }
 #endif
 
 #if XSIMD_WITH_SSE2
   static int toBitMask(xsimd::batch_bool<T, A> mask, const xsimd::sse2&) {
-    return _mm_movemask_pd(reinterpret_cast<__m128d>(mask.data));
+    return _mm_movemask_pd(velox_simd_cast<__m128d>(mask.data));
   }
 #endif
 
@@ -351,7 +365,7 @@ inline xsimd::batch_bool<float, xsimd::default_arch> leadingMask(
 #if XSIMD_WITH_SVE && defined(__GNUC__) && !defined(__clang__)
   return xsimd::batch_bool<float, xsimd::default_arch>(leadingMask32[i].data);
 #else
-  return reinterpret_cast<
+  return velox_simd_cast<
       xsimd::batch_bool<float, xsimd::default_arch>::register_type>(
       leadingMask32[i].data);
 #endif
@@ -379,7 +393,7 @@ inline xsimd::batch_bool<double, xsimd::default_arch> leadingMask(
 #if XSIMD_WITH_SVE && defined(__GNUC__) && !defined(__clang__)
   return xsimd::batch_bool<double, xsimd::default_arch>(leadingMask64[i].data);
 #else
-  return reinterpret_cast<
+  return velox_simd_cast<
       xsimd::batch_bool<double, xsimd::default_arch>::register_type>(
       leadingMask64[i].data);
 #endif
@@ -575,7 +589,7 @@ struct Gather<T, int32_t, A, 4> {
   template <int kScale>
   static xsimd::batch<T, A>
   apply(const T* base, VIndexType vindex, const xsimd::avx2&) {
-    return reinterpret_cast<typename xsimd::batch<T, A>::register_type>(
+    return velox_simd_cast<typename xsimd::batch<T, A>::register_type>(
         _mm256_i32gather_epi32(
             reinterpret_cast<const int32_t*>(base), vindex, kScale));
   }
@@ -629,12 +643,12 @@ struct Gather<T, int32_t, A, 4> {
       const T* base,
       VIndexType vindex,
       const xsimd::avx2&) {
-    return reinterpret_cast<typename xsimd::batch<T, A>::register_type>(
+    return velox_simd_cast<typename xsimd::batch<T, A>::register_type>(
         _mm256_mask_i32gather_epi32(
-            reinterpret_cast<__m256i>(src.data),
+            velox_simd_cast<__m256i>(src.data),
             reinterpret_cast<const int32_t*>(base),
             vindex,
-            reinterpret_cast<__m256i>(mask.data),
+            velox_simd_cast<__m256i>(mask.data),
             kScale));
   }
 #endif
@@ -738,7 +752,7 @@ struct Gather<T, int32_t, A, 8> {
       const T* base,
       xsimd::batch<int32_t, xsimd::sse2> vindex,
       const xsimd::avx2&) {
-    return reinterpret_cast<typename xsimd::batch<T, A>::register_type>(
+    return velox_simd_cast<typename xsimd::batch<T, A>::register_type>(
         _mm256_i32gather_epi64(
             reinterpret_cast<const long long*>(base), vindex, kScale));
   }
@@ -816,12 +830,12 @@ struct Gather<T, int32_t, A, 8> {
       const T* base,
       xsimd::batch<int32_t, xsimd::sse2> vindex,
       const xsimd::avx2&) {
-    return reinterpret_cast<typename xsimd::batch<T, A>::register_type>(
+    return velox_simd_cast<typename xsimd::batch<T, A>::register_type>(
         _mm256_mask_i32gather_epi64(
-            reinterpret_cast<__m256i>(src.data),
+            velox_simd_cast<__m256i>(src.data),
             reinterpret_cast<const long long*>(base),
             vindex,
-            reinterpret_cast<__m256i>(mask.data),
+            velox_simd_cast<__m256i>(mask.data),
             kScale));
   }
 #endif
@@ -847,7 +861,7 @@ struct Gather<T, int64_t, A, 8> {
   template <int kScale>
   static xsimd::batch<T, A>
   apply(const T* base, VIndexType vindex, const xsimd::avx2&) {
-    return reinterpret_cast<typename xsimd::batch<T, A>::register_type>(
+    return velox_simd_cast<typename xsimd::batch<T, A>::register_type>(
         _mm256_i64gather_epi64(
             reinterpret_cast<const long long*>(base), vindex, kScale));
   }
@@ -889,7 +903,7 @@ struct Gather<T, int64_t, A, 8> {
       const T* base,
       VIndexType vindex,
       const xsimd::avx2&) {
-    return reinterpret_cast<typename xsimd::batch<T, A>::register_type>(
+    return velox_simd_cast<typename xsimd::batch<T, A>::register_type>(
         _mm256_mask_i64gather_epi64(
             src,
             reinterpret_cast<const long long*>(base),
@@ -969,7 +983,12 @@ xsimd::batch<int16_t, A> pack32(
   constexpr int64_t k64Low16 = 0x0000ffff0000ffff;
   auto lows = _mm256_inserti128_si256(x, _mm256_extracti128_si256(y, 0), 1);
   auto highs = _mm256_inserti128_si256(y, _mm256_extracti128_si256(x, 1), 0);
+#ifdef _MSC_VER
+  auto mask = _mm256_set1_epi64x(k64Low16);
+  return _mm256_packus_epi32(_mm256_and_si256(lows, mask), _mm256_and_si256(highs, mask));
+#else
   return _mm256_packus_epi32(lows & k64Low16, highs & k64Low16);
+#endif
 }
 #endif
 
@@ -1039,16 +1058,16 @@ struct Permute<T, A, 4> {
       xsimd::batch<T, A> data,
       xsimd::batch<int32_t, A> idx,
       const xsimd::avx2&) {
-    return reinterpret_cast<typename xsimd::batch<T, A>::register_type>(
-        _mm256_permutevar8x32_epi32(reinterpret_cast<__m256i>(data.data), idx));
+    return velox_simd_cast<typename xsimd::batch<T, A>::register_type>(
+        _mm256_permutevar8x32_epi32(velox_simd_cast<__m256i>(data.data), idx));
   }
 #endif
 
 #if XSIMD_WITH_AVX
   static HalfBatch<T, A>
   apply(HalfBatch<T, A> data, HalfBatch<int32_t, A> idx, const xsimd::avx&) {
-    return reinterpret_cast<typename HalfBatch<T, A>::register_type>(
-        _mm_permutevar_ps(reinterpret_cast<__m128>(data.data), idx));
+    return velox_simd_cast<typename HalfBatch<T, A>::register_type>(
+        _mm_permutevar_ps(velox_simd_cast<__m128>(data.data), idx));
   }
 #endif
 };
@@ -1323,14 +1342,22 @@ struct Filter<T, A, 2> {
 #if XSIMD_WITH_AVX2
   static xsimd::batch<T, A>
   apply(xsimd::batch<T, A> data, int mask, const xsimd::avx2& arch) {
-    xsimd::batch<T, A> ans;
+    alignas(A::alignment()) T buf[xsimd::batch<T, A>::size] = {};
     auto mask1 = mask & 0xFF;
-    *reinterpret_cast<__m128i_u*>(&ans) =
-        detail::filterHalf<A, 0>(data, mask1, arch);
-    *reinterpret_cast<__m128i_u*>(
-        reinterpret_cast<int16_t*>(&ans) + __builtin_popcount(mask1)) =
-        detail::filterHalf<A, 1>(data, mask >> 8, arch);
-    return ans;
+    // filterHalf returns __m128i; store into the two halves of buf.
+    _mm_storeu_si128(
+        reinterpret_cast<__m128i*>(buf),
+        detail::filterHalf<A, 0>(data, mask1, arch));
+#ifdef _MSC_VER
+    _mm_storeu_si128(
+        reinterpret_cast<__m128i*>(buf + __popcnt(mask1)),
+        detail::filterHalf<A, 1>(data, mask >> 8, arch));
+#else
+    _mm_storeu_si128(
+        reinterpret_cast<__m128i*>(buf + __builtin_popcount(mask1)),
+        detail::filterHalf<A, 1>(data, mask >> 8, arch));
+#endif
+    return xsimd::load_aligned(buf);
   }
 #endif
 
@@ -1376,9 +1403,9 @@ struct Filter<T, A, 8> {
   apply(xsimd::batch<T, A> data, int mask, const xsimd::avx2&) {
     auto vindex =
         xsimd::batch<int32_t, A>::load_aligned(permute4x64Indices[mask]);
-    return reinterpret_cast<typename xsimd::batch<T, A>::register_type>(
+    return velox_simd_cast<typename xsimd::batch<T, A>::register_type>(
         _mm256_permutevar8x32_epi32(
-            reinterpret_cast<__m256i>(data.data), vindex));
+            velox_simd_cast<__m256i>(data.data), vindex));
   }
 #endif
 };
@@ -1421,12 +1448,12 @@ struct Crc32<uint64_t, A> {
 
 template <typename T, typename A>
 xsimd::batch<T, A> iota(const A&) {
-  static const auto kMemo = ({
+  static const auto kMemo = []() {
     constexpr int N = xsimd::batch<T, A>::size;
     T tmp[N];
     std::iota(tmp, tmp + N, 0);
-    xsimd::load_unaligned(tmp);
-  });
+    return xsimd::load_unaligned(tmp);
+  }();
   return kMemo;
 }
 

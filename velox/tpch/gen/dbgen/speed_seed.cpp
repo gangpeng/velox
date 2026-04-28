@@ -87,7 +87,9 @@ void NthElement(DSS_HUGE N, DSS_HUGE* StartSeed) {
   static int ln = -1;
 
   if ((verbose > 0) && ++ln % 1000 == 0) {
+#ifndef _WIN32
     fprintf(stderr, "%c\b", lnoise[i]);
+#endif
   }
   Mult = Multiplier;
   Z = static_cast<DSS_HUGE>(*StartSeed);

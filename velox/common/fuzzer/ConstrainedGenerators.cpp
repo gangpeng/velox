@@ -636,7 +636,7 @@ std::string CastVarcharInputGenerator::generateValidPrimitiveAsString() {
     case TypeKind::BIGINT:
       return std::to_string(rand<int64_t>(rng_, INT64_MIN, INT64_MAX));
     case TypeKind::HUGEINT:
-      return std::to_string(rand<int128_t>(rng_, INT64_MIN, INT64_MAX));
+      return std::to_string(rand<int64_t>(rng_, INT64_MIN, INT64_MAX));
     // Maximum precision number before it starts formatting it as 1.0E7. Once it
     // does so Java and C++ begin handling rounding differently leading to test
     // failures due to imprecision.
@@ -828,7 +828,7 @@ std::shared_ptr<RuleList> URLInputGenerator::generateMailToRules() {
               std::make_shared<RepeatingRule>(
                   rng_,
                   std::make_shared<RuleList>(std::vector<std::shared_ptr<Rule>>{
-                      std::make_shared<ConstantRule>("\%20"),
+                      std::make_shared<ConstantRule>("%20"),
                       std::make_shared<WordRule>(rng_)}),
                   1,
                   3)})),
@@ -867,7 +867,7 @@ std::shared_ptr<RuleList> URLInputGenerator::generateMailToRules() {
               std::make_shared<RepeatingRule>(
                   rng_,
                   std::make_shared<RuleList>(std::vector<std::shared_ptr<Rule>>{
-                      std::make_shared<ConstantRule>("\%20"),
+                      std::make_shared<ConstantRule>("%20"),
                       std::make_shared<WordRule>(rng_)}),
                   1,
                   3)})),

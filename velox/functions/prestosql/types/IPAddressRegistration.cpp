@@ -261,12 +261,18 @@ class IPAddressTypeFactory : public CustomTypeFactory {
 
   AbstractInputGeneratorPtr getInputGenerator(
       const InputGeneratorConfig& config) const override {
+#ifdef _MSC_VER
+    // RangeConstrainedGenerator requires std::is_arithmetic_v<T>,
+    // but absl::int128 (used as int128_t on MSVC) is not arithmetic.
+    return nullptr;
+#else
     return std::make_shared<fuzzer::RangeConstrainedGenerator<int128_t>>(
         config.seed_,
         IPADDRESS(),
         config.nullRatio_,
         0,
         std::numeric_limits<int128_t>::max());
+#endif
   }
 };
 } // namespace

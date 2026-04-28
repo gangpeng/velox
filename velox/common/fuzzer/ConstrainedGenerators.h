@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <sstream>
 
 #include "folly/json.h"
 
@@ -289,7 +290,8 @@ class RandomInputGenerator<T, std::enable_if_t<std::is_same_v<T, RowType>>>
   std::vector<std::unique_ptr<AbstractInputGenerator>> fieldGenerators_;
 };
 
-template <typename T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+template <typename T>
+  requires std::is_arithmetic_v<T>
 class RangeConstrainedGenerator : public AbstractInputGenerator {
  public:
   RangeConstrainedGenerator(
@@ -382,7 +384,20 @@ class JsonInputGenerator : public AbstractInputGenerator {
     using T = typename TypeTraits<KIND>::DeepCopiedType;
     VELOX_CHECK(v.isSet());
     const T value = v.value<T>();
-    return folly::dynamic(value);
+    if constexpr (std::is_same_v<T, Timestamp>) {
+      // folly::dynamic does not have a constructor for Timestamp; convert
+      // to milliseconds (int64_t) so the overload is unambiguous on MSVC.
+      return folly::dynamic(value.toMillis());
+    } else if constexpr (std::is_same_v<T, int128_t>) {
+      // folly::dynamic does not support 128-bit integers; convert to string.
+      // Use ostringstream to avoid MSVC overload resolution issues with
+      // folly::to<std::string> for absl::int128.
+      std::ostringstream oss;
+      oss << static_cast<absl::int128>(value);
+      return folly::dynamic(oss.str());
+    } else {
+      return folly::dynamic(value);
+    }
   }
 
   // Presto and Velox JSON parser have different behavior for floating point

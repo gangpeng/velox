@@ -49,10 +49,18 @@ set(ENABLE_SANITIZER OFF)
 set(ENABLE_UBSAN OFF)
 set(BUILD_SHELL OFF)
 set(EXPORT_DLL_SYMBOLS OFF)
+# On Windows, DuckDB's winapi.hpp defaults to dllexport/dllimport decorations
+# when DUCKDB_BUILD_LIBRARY is defined. Since we build DuckDB as a static
+# library, force DUCKDB_API to be empty to avoid C2491 linker errors.
+if(MSVC)
+  add_compile_definitions(DUCKDB_API=)
+endif()
 set(PREVIOUS_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 set(CMAKE_BUILD_TYPE Release)
 set(PREVIOUS_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor")
+if(NOT MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-non-virtual-dtor")
+endif()
 # Clang17 requires this. See issue #13215.
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 17.0.0)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-template-arg-list-after-template-kw")

@@ -21,6 +21,14 @@ using namespace std::chrono_literals;
 using namespace facebook::velox::dwio::common;
 using namespace facebook::velox::dwio::common::retrypolicy;
 
+#ifdef _WIN32
+#define SKIP_ON_WINDOWS()                                          \
+  GTEST_SKIP() << "Windows sleep precision is too low for timing " \
+                  "assertions in retry tests."
+#else
+#define SKIP_ON_WINDOWS()
+#endif
+
 class Raise {
  public:
   explicit Raise(uint8_t exceptionCount)
@@ -47,6 +55,7 @@ class Raise {
 };
 
 TEST(RetryModuleTests, retryUntilSuccessDefault) {
+  SKIP_ON_WINDOWS();
   Raise raise(4);
   std::function<int8_t()> retriable = [&raise]() {
     return raise.call<int8_t>(10);
@@ -65,6 +74,7 @@ TEST(RetryModuleTests, retryUntilSuccessDefault) {
 }
 
 TEST(RetryModuleTests, retryUntilSuccessBackoff) {
+  SKIP_ON_WINDOWS();
   Raise raise(4);
   std::function<int8_t()> retriable = [&raise]() {
     return raise.call<int8_t>(10);
@@ -83,6 +93,7 @@ TEST(RetryModuleTests, retryUntilSuccessBackoff) {
 }
 
 TEST(RetryModuleTests, retryCapMaxDelay) {
+  SKIP_ON_WINDOWS();
   Raise raise(4);
   std::function<int8_t()> retriable = [&raise]() {
     return raise.call<int8_t>(10);
@@ -101,6 +112,7 @@ TEST(RetryModuleTests, retryCapMaxDelay) {
 }
 
 TEST(RetryModuleTests, failOnRetriesExceededDefault) {
+  SKIP_ON_WINDOWS();
   Raise raise(6);
   std::function<int8_t()> retriable = [&raise]() {
     return raise.call<int8_t>(10);
@@ -114,6 +126,7 @@ TEST(RetryModuleTests, failOnRetriesExceededDefault) {
 }
 
 TEST(RetryModuleTests, failOnRetriesExceededBackoff) {
+  SKIP_ON_WINDOWS();
   Raise raise(6);
   std::function<int8_t()> retriable = [&raise]() {
     return raise.call<int8_t>(10);
@@ -127,6 +140,7 @@ TEST(RetryModuleTests, failOnRetriesExceededBackoff) {
 }
 
 TEST(RetryModuleTests, failOnRetriesExceededTotalBackoff) {
+  SKIP_ON_WINDOWS();
   Raise raise(100);
   std::function<int8_t()> retriable = [&raise]() {
     return raise.call<int8_t>(10);
@@ -144,6 +158,7 @@ TEST(RetryModuleTests, failOnRetriesExceededTotalBackoff) {
 }
 
 TEST(RetryModuleTests, defineDifferentUnit) {
+  SKIP_ON_WINDOWS();
   Raise raise(1);
   std::function<int8_t()> retriable = [&raise]() {
     return raise.call<int8_t>(11);
@@ -157,6 +172,7 @@ TEST(RetryModuleTests, defineDifferentUnit) {
 }
 
 TEST(RetryModuleTests, testJitter) {
+  SKIP_ON_WINDOWS();
   ExponentialBackoffPolicyFactory policyFactory(1ms, 25ms, 100);
   auto policy = policyFactory.getRetryPolicy();
   float nextWait = RetryDuration(1ms).count();
@@ -175,6 +191,7 @@ TEST(RetryModuleTests, testJitter) {
 }
 
 TEST(RetryModuleTests, exponentialBackOffCountExecutionTime) {
+  SKIP_ON_WINDOWS();
   Raise raise(1);
   auto retriable = [&raise]() {
     std::this_thread::sleep_for(20ms);

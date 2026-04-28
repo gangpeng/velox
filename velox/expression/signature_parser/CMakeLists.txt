@@ -24,11 +24,19 @@ bison_target(
   COMPILE_FLAGS "-Werror -Wno-deprecated"
 )
 
+# On MSVC, the -Cf flag causes win_flex to generate a full (uncompressed) DFA
+# table that is too large for MSVC to compile (fatal error C1075). Use the
+# default compressed-table mode on Windows instead.
+if(MSVC)
+  set(FLEX_SIGNATURE_PARSER_FLAGS "--prefix=veloxsp")
+else()
+  set(FLEX_SIGNATURE_PARSER_FLAGS "-Cf --prefix=veloxsp")
+endif()
 flex_target(
   SignatureParserScanner
   SignatureParser.ll
   ${CMAKE_CURRENT_BINARY_DIR}/Scanner.cpp
-  COMPILE_FLAGS "-Cf --prefix=veloxsp"
+  COMPILE_FLAGS "${FLEX_SIGNATURE_PARSER_FLAGS}"
 )
 
 add_flex_bison_dependency(SignatureParserScanner SignatureParser)

@@ -27,6 +27,9 @@
 #include "md5.h"
 #include <folly/Conv.h>
 #include <folly/Format.h>
+#ifdef _MSC_VER
+#include "absl/numeric/int128.h"
+#endif
 
 namespace facebook::velox::crypto {
 
@@ -255,6 +258,28 @@ namespace facebook::velox::crypto {
     }
 
     std::string MD5Context::DigestToBase10(const unsigned char* digest) {
+#ifdef _MSC_VER
+      // On MSVC, __uint128_t is unavailable. Use absl::uint128 instead.
+      // folly::to<std::string> does not support absl::uint128, so we convert
+      // manually via repeated division.
+      absl::uint128 val = 0;
+      for (int i = 0; i < MD5_HASH_LENGTH_BINARY; i++) {
+        val = (val << 4) | static_cast<absl::uint128>((digest[i] >> 4) & 0xf);
+        val = (val << 4) | static_cast<absl::uint128>(digest[i] & 0xf);
+      }
+      if (val == 0) {
+        return "0";
+      }
+      std::string result;
+      while (val > 0) {
+        result += static_cast<char>(
+            '0' + static_cast<int>(
+                      static_cast<uint64_t>(val % absl::uint128{10})));
+        val /= absl::uint128{10};
+      }
+      std::reverse(result.begin(), result.end());
+      return result;
+#else
       __uint128_t val = 0;
       for (int i = 0; i < MD5_HASH_LENGTH_BINARY; i++) {
         val = static_cast<__uint128_t>(val << 4) | ((digest[i] >> 4) & 0xf);
@@ -262,6 +287,7 @@ namespace facebook::velox::crypto {
       }
       auto dec = folly::to<std::string>(static_cast<__uint128_t>(val));
       return dec;
+#endif
     }
 
     int MD5Context::FinishHex(char *out_digest) {

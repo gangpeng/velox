@@ -16,6 +16,7 @@
 
 #include <glog/logging.h>
 #include <cstdint>
+#include <numeric>
 #include <optional>
 #include <vector>
 #include "gtest/gtest.h"

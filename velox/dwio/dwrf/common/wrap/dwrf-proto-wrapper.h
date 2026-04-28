@@ -31,6 +31,23 @@ DIAGNOSTIC_IGNORE("-Wshorten-64-to-32")
 DIAGNOSTIC_IGNORE("-Wweak-vtables")
 #endif
 
+// Windows headers define VOID as void, DOUBLE, SHORT, etc. which conflict
+// with protobuf enum values in dwrf_proto.pb.h.
+#ifdef _WIN32
+#pragma push_macro("VOID")
+#pragma push_macro("DOUBLE")
+#pragma push_macro("SHORT")
+#undef VOID
+#undef DOUBLE
+#undef SHORT
+#endif
+
 #include "velox/dwio/dwrf/proto/dwrf_proto.pb.h"
+
+#ifdef _WIN32
+#pragma pop_macro("SHORT")
+#pragma pop_macro("DOUBLE")
+#pragma pop_macro("VOID")
+#endif
 
 DIAGNOSTIC_POP

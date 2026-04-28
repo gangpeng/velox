@@ -29,8 +29,15 @@ TEST(DuckConversionTest, duckValueToVariant) {
   EXPECT_EQ(variant(TypeKind::UNKNOWN), duckValueToVariant(Value()));
 
   // Booleans.
+#ifdef _MSC_VER
+#pragma push_macro("BOOLEAN")
+#undef BOOLEAN
+#endif
   EXPECT_EQ(variant(false), duckValueToVariant(Value::BOOLEAN(0)));
   EXPECT_EQ(variant(true), duckValueToVariant(Value::BOOLEAN(1)));
+#ifdef _MSC_VER
+#pragma pop_macro("BOOLEAN")
+#endif
 
   // Integers.
   auto min8 = std::numeric_limits<int8_t>::min();

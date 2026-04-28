@@ -29,7 +29,7 @@ class AllocationPoolTest : public testing::Test {
  protected:
   void SetUp() override {
     memory::MemoryManager::Options options;
-    options.allocatorCapacity = 8L << 30;
+    options.allocatorCapacity = 8LL << 30;
     manager_ = std::make_shared<memory::MemoryManager>(options);
 
     root_ = manager_->addRootPool("allocationPoolTestRoot");
@@ -87,7 +87,7 @@ TEST_F(AllocationPoolTest, hugePages) {
     EXPECT_LE((62 << 20) - 1, allocationPool->testingFreeAddressableBytes());
 
     // We make a 5GB extra large allocation.
-    allocationPool->allocateFixed(5UL << 30);
+    allocationPool->allocateFixed(5ULL << 30);
     EXPECT_EQ(5, allocationPool->numRanges());
 
     // 5G is an even multiple of huge page, no free space at end. But it can be
@@ -95,9 +95,9 @@ TEST_F(AllocationPoolTest, hugePages) {
     EXPECT_GE(kHugePageSize, allocationPool->testingFreeAddressableBytes());
 
     EXPECT_LE(
-        (5UL << 30) + (31 << 20) + (128 << 10),
+        (5ULL << 30) + (31 << 20) + (128 << 10),
         allocationPool->allocatedBytes());
-    EXPECT_LE((5UL << 30) + (31 << 20) + (128 << 10), pool_->usedBytes());
+    EXPECT_LE((5ULL << 30) + (31 << 20) + (128 << 10), pool_->usedBytes());
 
     if (counter++ >= 1) {
       break;

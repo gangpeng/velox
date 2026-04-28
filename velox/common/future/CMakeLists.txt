@@ -12,3 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 velox_install_library_headers()
+
+# velox_future is header-only but its VeloxPromise.h includes folly/Unit.h,
+# so consumers need Folly in their include path.
+if(NOT TARGET velox_future)
+  add_library(velox_future INTERFACE)
+  target_link_libraries(velox_future INTERFACE Folly::folly)
+endif()

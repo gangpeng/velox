@@ -109,7 +109,7 @@ TEST_F(MemoryManagerTest, ctor) {
   }
   {
     MemoryManager::Options options;
-    const auto kCapacity = 4L << 30;
+    const auto kCapacity = 4LL << 30;
     options.allocatorCapacity = kCapacity;
     options.arbitratorCapacity = kCapacity;
     std::string arbitratorKind = "SHARED";
@@ -193,8 +193,8 @@ TEST_F(MemoryManagerTest, createWithCustomArbitrator) {
       [&] { MemoryArbitrator::unregisterFactory(kindString); });
   MemoryManager::Options options;
   options.arbitratorKind = kindString;
-  options.allocatorCapacity = 8L << 20;
-  options.arbitratorCapacity = 256L << 20;
+  options.allocatorCapacity = 8LL << 20;
+  options.arbitratorCapacity = 256LL << 20;
   MemoryManager manager{options};
   ASSERT_EQ(manager.arbitrator()->capacity(), options.allocatorCapacity);
   ASSERT_EQ(manager.allocator()->capacity(), options.allocatorCapacity);
@@ -249,7 +249,7 @@ TEST_F(MemoryManagerTest, addPool) {
 
 TEST_F(MemoryManagerTest, addPoolWithArbitrator) {
   MemoryManager::Options options;
-  const auto kCapacity = 32L << 30;
+  const auto kCapacity = 32LL << 30;
   options.allocatorCapacity = kCapacity;
   options.arbitratorKind = arbitratorKind_;
   // The arbitrator capacity will be overridden by the memory manager's

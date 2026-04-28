@@ -83,7 +83,8 @@ size_t getElementsVectorLength(
 
 int64_t randShortDecimal(const TypePtr& type, FuzzerGenerator& rng) {
   auto precision = type->asShortDecimal().precision();
-  return rand<int64_t>(rng) % DecimalUtil::kPowersOfTen[precision];
+  return static_cast<int64_t>(
+      rand<int64_t>(rng) % DecimalUtil::kPowersOfTen[precision]);
 }
 
 int128_t randLongDecimal(const TypePtr& type, FuzzerGenerator& rng) {
@@ -187,7 +188,7 @@ void fuzzFlatPrimitiveImpl(
       if (vector->type()->isLongDecimal()) {
         flatVector->set(i, randLongDecimal(vector->type(), rng));
       } else if (vector->type()->isHugeint()) {
-        flatVector->set(i, rand<int128_t>(rng, opts.dataSpec));
+        flatVector->set(i, static_cast<int128_t>(rand<int64_t>(rng, opts.dataSpec)));
       } else {
         VELOX_NYI();
       }
@@ -701,7 +702,7 @@ void VectorFuzzer::fuzzOffsetsAndSizes(
   auto rawOffsets = offsets->asMutable<vector_size_t>();
   auto rawSizes = sizes->asMutable<vector_size_t>();
 
-  size_t containerAvgLength = std::max(elementsSize / size, 1UL);
+  size_t containerAvgLength = std::max(elementsSize / size, size_t(1));
   size_t childSize = 0;
   size_t length = 0;
 

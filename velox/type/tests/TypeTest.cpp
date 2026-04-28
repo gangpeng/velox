@@ -733,8 +733,9 @@ class Bar {};
 
 TEST(TypeTest, opaque) {
   const auto foo = OpaqueType::create<Foo>();
+  // MSVC's typeid().name() includes "class" prefix, so match a substring.
   VELOX_ASSERT_THROW(
-      approximateTypeEncodingwidth(foo), "Unsupported type: OPAQUE<Foo>");
+      approximateTypeEncodingwidth(foo), "Unsupported type: OPAQUE<");
   const auto bar = OpaqueType::create<Bar>();
   // Names currently use typeid which is not stable across platforms. We'd
   // need to change it later if we start serializing opaque types, e.g. we can
@@ -752,21 +753,22 @@ TEST(TypeTest, opaque) {
 
   OpaqueType::registerSerialization<Foo>("id_of_foo");
   ASSERT_EQ(foo->serialize()["opaque"], "id_of_foo");
+  // Use partial substrings to handle MSVC's "class" prefix in typeid names.
   VELOX_ASSERT_THROW(
       foo->getSerializeFunc(),
-      "No serialization function registered for OPAQUE<Foo>");
+      "No serialization function registered for OPAQUE<");
   VELOX_ASSERT_THROW(
       foo->getDeserializeFunc(),
-      "No deserialization function registered for OPAQUE<Foo>");
+      "No deserialization function registered for OPAQUE<");
   VELOX_ASSERT_THROW(
       bar->serialize(),
-      "No serialization persistent name registered for OPAQUE<Bar>");
+      "No serialization persistent name registered for OPAQUE<");
   VELOX_ASSERT_THROW(
       bar->getSerializeFunc(),
-      "No serialization function registered for OPAQUE<Bar>");
+      "No serialization function registered for OPAQUE<");
   VELOX_ASSERT_THROW(
       bar->getDeserializeFunc(),
-      "No deserialization function registered for OPAQUE<Bar>");
+      "No deserialization function registered for OPAQUE<");
 
   auto foo3 = Type::create(foo->serialize());
   ASSERT_EQ(*foo, *foo3);
@@ -832,13 +834,17 @@ TEST(TypeTest, opaqueWithMetadata) {
   auto type = std::make_shared<OpaqueWithMetadataType>(123);
   auto type2 = std::make_shared<OpaqueWithMetadataType>(123);
   auto other = std::make_shared<OpaqueWithMetadataType>(234);
-  EXPECT_TRUE(*def != *type);
-  EXPECT_EQ(*type, *type2);
-  EXPECT_NE(*type, *other);
+  EXPECT_TRUE(static_cast<const Type&>(*def) != static_cast<const Type&>(*type));
+  EXPECT_TRUE(
+      static_cast<const Type&>(*type) == static_cast<const Type&>(*type2));
+  EXPECT_TRUE(
+      static_cast<const Type&>(*type) != static_cast<const Type&>(*other));
 
   OpaqueType::registerSerialization<OpaqueWithMetadata>("my_fancy_type");
 
-  EXPECT_EQ(*Type::create(type->serialize()), *type);
+  EXPECT_TRUE(
+      static_cast<const Type&>(*Type::create(type->serialize())) ==
+      static_cast<const Type&>(*type));
   EXPECT_EQ(
       std::dynamic_pointer_cast<const OpaqueWithMetadataType>(
           Type::create(type->serialize()))

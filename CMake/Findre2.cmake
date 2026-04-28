@@ -25,34 +25,34 @@ if(TARGET re2::re2)
   return()
 endif()
 
-find_package(PkgConfig REQUIRED)
-# TODO(junyer): Use the IMPORTED_TARGET option whenever CMake 3.6 (or newer)
-# becomes the minimum required: that will take care of the add_library() and
-# set_property() calls; then we can simply alias PkgConfig::RE2 as re2::re2. For
-# now, we can only set INTERFACE_* properties that existed in CMake 3.5.
-pkg_check_modules(RE2 QUIET re2)
-if(RE2_FOUND)
-  set(re2_FOUND "${RE2_FOUND}")
-  add_library(re2::re2 INTERFACE IMPORTED)
-  if(RE2_INCLUDE_DIRS)
-    set_property(TARGET re2::re2 PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${RE2_INCLUDE_DIRS}")
+find_package(PkgConfig QUIET)
+if(PKG_CONFIG_FOUND)
+  # TODO(junyer): Use the IMPORTED_TARGET option whenever CMake 3.6 (or newer)
+  # becomes the minimum required: that will take care of the add_library() and
+  # set_property() calls; then we can simply alias PkgConfig::RE2 as re2::re2. For
+  # now, we can only set INTERFACE_* properties that existed in CMake 3.5.
+  pkg_check_modules(RE2 QUIET re2)
+  if(RE2_FOUND)
+    set(re2_FOUND "${RE2_FOUND}")
+    add_library(re2::re2 INTERFACE IMPORTED)
+    if(RE2_INCLUDE_DIRS)
+      set_property(TARGET re2::re2 PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${RE2_INCLUDE_DIRS}")
+    endif()
+    if(RE2_CFLAGS_OTHER)
+      # Filter out the -std flag, which is handled by CMAKE_CXX_STANDARD.
+      foreach(flag IN LISTS RE2_CFLAGS_OTHER)
+        if("${flag}" MATCHES "^-std=")
+          list(REMOVE_ITEM RE2_CFLAGS_OTHER "${flag}")
+        endif()
+      endforeach()
+      set_property(TARGET re2::re2 PROPERTY INTERFACE_COMPILE_OPTIONS "${RE2_CFLAGS_OTHER}")
+    endif()
+    if(RE2_LDFLAGS)
+      set_property(TARGET re2::re2 PROPERTY INTERFACE_LINK_LIBRARIES "${RE2_LDFLAGS}")
+    endif()
+    message(STATUS "Found RE2 via pkg-config.")
+    return()
   endif()
-  if(RE2_CFLAGS_OTHER)
-    # Filter out the -std flag, which is handled by CMAKE_CXX_STANDARD.
-    # TODO(junyer): Use the FILTER option whenever CMake 3.6 (or newer) becomes
-    # the minimum required: that will allow this to be concise.
-    foreach(flag IN LISTS RE2_CFLAGS_OTHER)
-      if("${flag}" MATCHES "^-std=")
-        list(REMOVE_ITEM RE2_CFLAGS_OTHER "${flag}")
-      endif()
-    endforeach()
-    set_property(TARGET re2::re2 PROPERTY INTERFACE_COMPILE_OPTIONS "${RE2_CFLAGS_OTHER}")
-  endif()
-  if(RE2_LDFLAGS)
-    set_property(TARGET re2::re2 PROPERTY INTERFACE_LINK_LIBRARIES "${RE2_LDFLAGS}")
-  endif()
-  message(STATUS "Found RE2 via pkg-config.")
-  return()
 endif()
 
 if(re2_FIND_REQUIRED)

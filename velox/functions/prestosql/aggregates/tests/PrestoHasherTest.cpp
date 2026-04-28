@@ -206,14 +206,14 @@ TEST_F(PrestoHasherTest, unscaledShortDecimal) {
        1000,
        -1000,
        std::nullopt,
-       DecimalUtil::kShortDecimalMax,
-       DecimalUtil::kShortDecimalMin},
+       static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+       static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
       {0,
        1000,
        -1000,
        0,
-       DecimalUtil::kShortDecimalMax,
-       DecimalUtil::kShortDecimalMin},
+       static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+       static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
       DECIMAL(18, 0));
 }
 

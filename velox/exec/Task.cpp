@@ -1498,7 +1498,7 @@ void Task::ensureSplitGroupsAreBeingProcessedLocked() {
 
 void Task::setMaxSplitSequenceId(
     const core::PlanNodeId& planNodeId,
-    long maxSequenceId) {
+    int64_t maxSequenceId) {
   std::lock_guard<std::timed_mutex> l(mutex_);
   if (isRunningLocked()) {
     auto& splitsState = getPlanNodeSplitsStateLocked(planNodeId);
@@ -1520,7 +1520,7 @@ void Task::onAddSplit(
 bool Task::addSplitWithSequence(
     const core::PlanNodeId& planNodeId,
     exec::Split&& split,
-    long sequenceId) {
+    int64_t sequenceId) {
   RECORD_METRIC_VALUE(kMetricTaskSplitsCount, 1);
   std::vector<ContinuePromise> promises;
   bool added = false;

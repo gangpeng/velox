@@ -83,7 +83,7 @@ void generateJsonTyped(
       result.append(buffer);
       result.append("\"");
     } else if (isDate) {
-      std::string stringValue = DATE()->toString(value);
+      std::string stringValue = DATE()->toString(static_cast<int32_t>(value));
       result.reserve(stringValue.size() + 2);
       result.append("\"");
       result.append(stringValue);
@@ -91,7 +91,7 @@ void generateJsonTyped(
     } else if (isDecimal) {
       result.append(DecimalUtil::toString(value, type));
     } else {
-      folly::toAppend<std::string, T>(value, &result);
+      folly::toAppend(value, &result);
     }
   }
 }
@@ -677,6 +677,16 @@ simdjson::simdjson_result<T> fromString(const std::string_view& s) {
 
   return std::move(*result);
 }
+
+#ifdef _MSC_VER
+// folly::tryTo<int128_t> is not available on MSVC (FOLLY_HAVE_INT128_T is
+// undefined). Map keys of HUGEINT type are unsupported.
+template <>
+simdjson::simdjson_result<int128_t> fromString<int128_t>(
+    const std::string_view& /*s*/) {
+  return simdjson::INCORRECT_TYPE;
+}
+#endif
 
 // Write x to writer if x is in the range of writer type `To'.  Only the
 // following cases are supported:

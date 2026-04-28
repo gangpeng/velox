@@ -1063,10 +1063,11 @@ TEST_F(ParquetTableScanTest, filterNullIcebergPartition) {
 }
 
 TEST_F(ParquetTableScanTest, sessionTimezone) {
+  constexpr const char* kSessionTimezone = "+08:00";
   SCOPED_TESTVALUE_SET(
       "facebook::velox::parquet::PageReader::readPageHeader",
       std::function<void(PageReader*)>(([&](PageReader* reader) {
-        VELOX_CHECK_EQ(reader->sessionTimezone()->name(), "Asia/Shanghai");
+        VELOX_CHECK_EQ(reader->sessionTimezone()->name(), kSessionTimezone);
       })));
 
   // Read sample.parquet to verify if the sessionTimezone in the PageReader
@@ -1084,7 +1085,7 @@ TEST_F(ParquetTableScanTest, sessionTimezone) {
       {makeSplit(getExampleFilePath("sample.parquet"))},
       {"a"},
       "SELECT a FROM tmp",
-      "Asia/Shanghai");
+      kSessionTimezone);
 }
 
 TEST_F(ParquetTableScanTest, timestampInt64Dictionary) {

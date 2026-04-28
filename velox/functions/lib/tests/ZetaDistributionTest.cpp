@@ -15,6 +15,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <numeric>
 
 #include "velox/functions/lib/ZetaDistribution.h"
 

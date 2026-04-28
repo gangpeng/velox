@@ -110,7 +110,7 @@ struct Envelope {
         .maxY = -std::numeric_limits<float>::infinity()};
   }
 
-  static constexpr inline Envelope from(
+  static inline Envelope from(
       double minX,
       double minY,
       double maxX,

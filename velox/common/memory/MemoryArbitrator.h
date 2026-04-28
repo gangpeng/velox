@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <vector>
 
 #include "velox/common/base/AsyncSource.h"
@@ -97,7 +98,10 @@ class MemoryArbitrator {
 
     std::string toString() const {
       std::stringstream ss;
-      for (const auto& extraConfig : extraConfigs) {
+      std::vector<std::pair<std::string, std::string>> sortedExtraConfigs{
+          extraConfigs.begin(), extraConfigs.end()};
+      std::sort(sortedExtraConfigs.begin(), sortedExtraConfigs.end());
+      for (const auto& extraConfig : sortedExtraConfigs) {
         ss << extraConfig.first << "=" << extraConfig.second << ";";
       }
       return fmt::format(

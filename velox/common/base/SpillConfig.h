@@ -19,6 +19,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <limits>
+
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include "velox/common/base/PrefixSortConfig.h"
 #include "velox/common/compression/Compression.h"
@@ -112,53 +114,53 @@ struct SpillConfig {
 
   /// The max spill file size. If it is zero, there is no limit on the spill
   /// file size.
-  uint64_t maxFileSize;
+  uint64_t maxFileSize{std::numeric_limits<int64_t>::max()};
 
   /// Specifies the size to buffer the serialized spill data before write to
   /// storage system for io efficiency.
-  uint64_t writeBufferSize;
+  uint64_t writeBufferSize{1ULL << 20};
 
   /// Specifies the buffer size to read from one spilled file. If the underlying
   /// filesystem supports async read, we do read-ahead with double buffering,
   /// which doubles the buffer used to read from each spill file.
-  uint64_t readBufferSize;
+  uint64_t readBufferSize{1ULL << 20};
 
   /// Executor for spilling. If nullptr spilling writes on the Driver's thread.
-  folly::Executor* executor; // Not owned.
+  folly::Executor* executor{nullptr}; // Not owned.
 
   /// The minimal spillable memory reservation in percentage of the current
   /// memory usage.
-  int32_t minSpillableReservationPct;
+  int32_t minSpillableReservationPct{5};
 
   /// The spillable memory reservation growth in percentage of the current
   /// memory usage.
-  int32_t spillableReservationGrowthPct;
+  int32_t spillableReservationGrowthPct{10};
 
   /// The start partition bit offset of the top (the first level) partitions.
-  uint8_t startPartitionBit;
+  uint8_t startPartitionBit{48};
 
   /// Used to calculate the spill hash partition number for hash join and
   /// RowNumber with 'startPartitionBit'.
-  uint8_t numPartitionBits;
+  uint8_t numPartitionBits{3};
 
   /// The max allowed spilling level with zero being the initial spilling
   /// level. This only applies for hash build spilling which needs recursive
   /// spilling when the build table is too big. If it is set to -1, then there
   /// is no limit and then some extreme large query might run out of spilling
   /// partition bits at the end.
-  int32_t maxSpillLevel;
+  int32_t maxSpillLevel{1};
 
   /// The max row numbers to fill and spill for each spill run. This is used to
   /// cap the memory used for spilling. If it is zero, then there is no limit
   /// and spilling might run out of memory.
-  uint64_t maxSpillRunRows;
+  uint64_t maxSpillRunRows{12ULL << 20};
 
   /// Minimum memory footprint size required to reclaim memory from a file
   /// writer by flushing its buffered data to disk.
-  uint64_t writerFlushThresholdSize;
+  uint64_t writerFlushThresholdSize{96ULL << 20};
 
   /// CompressionKind when spilling, CompressionKind_NONE means no compression.
-  common::CompressionKind compressionKind;
+  common::CompressionKind compressionKind{common::CompressionKind_NONE};
 
   /// The max number of files to merge at a time when merging sorted files into
   /// a single ordered stream. 0 means unlimited. This is used to reduce memory
@@ -166,7 +168,7 @@ struct SpillConfig {
   /// files to avoid using too much memory and causing OOM. Note that this is
   /// only applicable for ordered spill, is not applicable for spill scenarios
   /// that don't need sorting, e.g. HashJoin.
-  uint32_t numMaxMergeFiles;
+  uint32_t numMaxMergeFiles{0};
 
   /// Prefix sort config when spilling, enable prefix sort when this config is
   /// set, otherwise, fallback to timsort.
@@ -176,6 +178,6 @@ struct SpillConfig {
   std::string fileCreateConfig;
 
   /// The minimum number of rows to read when processing spilled window data.
-  uint32_t windowMinReadBatchRows;
+  uint32_t windowMinReadBatchRows{1'000};
 };
 } // namespace facebook::velox::common

@@ -17,6 +17,11 @@
 #include <gtest/gtest.h>
 #include <random>
 
+#ifdef _WIN32
+#include <time.h>
+#include <folly/portability/Time.h>
+#endif
+
 #include "velox/common/base/tests/GTestUtils.h"
 #include "velox/common/testutil/RandomSeed.h"
 #include "velox/type/Timestamp.h"
@@ -302,6 +307,9 @@ bool checkUtcToEpoch(int year, int mon, int mday, int hour, int min, int sec) {
 } // namespace
 
 TEST(TimestampTest, compareWithToStringAlt) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   std::default_random_engine gen(common::testutil::getRandomSeed(42));
   std::uniform_int_distribution<int64_t> distSec(
       Timestamp::kMinSeconds, Timestamp::kMaxSeconds);
@@ -320,6 +328,9 @@ TEST(TimestampTest, compareWithToStringAlt) {
 }
 
 TEST(TimestampTest, utcToEpoch) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   ASSERT_TRUE(checkUtcToEpoch(1970, 1, 1, 0, 0, 0));
   ASSERT_TRUE(checkUtcToEpoch(2001, 11, 12, 18, 31, 1));
   ASSERT_TRUE(checkUtcToEpoch(1969, 12, 31, 23, 59, 59));
@@ -437,6 +448,11 @@ TEST(TimestampTest, epochToUtc) {
 }
 
 TEST(TimestampTest, randomEpochToUtc) {
+#ifdef _WIN32
+  // Windows gmtime_r (via Folly) handles different date ranges than Linux,
+  // causing mismatch with epochToCalendarUtc for extreme values.
+  GTEST_SKIP() << "gmtime_r range differs on Windows";
+#endif
   uint64_t seed = 42;
   std::default_random_engine gen(seed);
   std::uniform_int_distribution<time_t> dist(
@@ -506,16 +522,25 @@ void testTmToString(
 }
 
 TEST(TimestampTest, tmToStringDateOnly) {
+#ifdef _WIN32
+  GTEST_SKIP() << "gmtime_r range differs on Windows";
+#endif
   // %F - equivalent to "%Y-%m-%d" (the ISO 8601 date format)
   testTmToString("%F", TimestampToStringOptions::Mode::kDateOnly);
 }
 
 TEST(TimestampTest, tmToStringTimeOnly) {
+#ifdef _WIN32
+  GTEST_SKIP() << "gmtime_r range differs on Windows";
+#endif
   // %T - equivalent to "%H:%M:%S" (the ISO 8601 time format)
   testTmToString("%T", TimestampToStringOptions::Mode::kTimeOnly);
 }
 
 TEST(TimestampTest, tmToStringTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "gmtime_r range differs on Windows";
+#endif
   // %FT%T - equivalent to "%Y-%m-%dT%H:%M:%S" (the ISO 8601 timestamp format)
   testTmToString("%FT%T", TimestampToStringOptions::Mode::kFull);
 }

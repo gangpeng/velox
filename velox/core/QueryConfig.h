@@ -951,12 +951,12 @@ class QueryConfig {
   }
 
   uint64_t maxPartialAggregationMemoryUsage() const {
-    static constexpr uint64_t kDefault = 1L << 24;
+    static constexpr uint64_t kDefault = 1LL << 24;
     return get<uint64_t>(kMaxPartialAggregationMemory, kDefault);
   }
 
   uint64_t maxExtendedPartialAggregationMemoryUsage() const {
-    static constexpr uint64_t kDefault = 1L << 26;
+    static constexpr uint64_t kDefault = 1LL << 26;
     return get<uint64_t>(kMaxExtendedPartialAggregationMemory, kDefault);
   }
 
@@ -1006,7 +1006,7 @@ class QueryConfig {
   }
 
   uint64_t maxSpillBytes() const {
-    static constexpr uint64_t kDefault = 100UL << 30;
+    static constexpr uint64_t kDefault = 100ULL << 30;
     return get<uint64_t>(kMaxSpillBytes, kDefault);
   }
 
@@ -1239,7 +1239,7 @@ class QueryConfig {
   }
 
   uint64_t writerFlushThresholdBytes() const {
-    return get<uint64_t>(kWriterFlushThresholdBytes, 96L << 20);
+    return get<uint64_t>(kWriterFlushThresholdBytes, 96LL << 20);
   }
 
   uint64_t maxSpillFileSize() const {
@@ -1262,12 +1262,12 @@ class QueryConfig {
 
   uint64_t spillWriteBufferSize() const {
     // The default write buffer size set to 1MB.
-    return get<uint64_t>(kSpillWriteBufferSize, 1L << 20);
+    return get<uint64_t>(kSpillWriteBufferSize, 1LL << 20);
   }
 
   uint64_t spillReadBufferSize() const {
     // The default read buffer size set to 1MB.
-    return get<uint64_t>(kSpillReadBufferSize, 1L << 20);
+    return get<uint64_t>(kSpillReadBufferSize, 1LL << 20);
   }
 
   std::string spillFileCreateConfig() const {

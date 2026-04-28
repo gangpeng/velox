@@ -217,13 +217,13 @@ TEST_P(CompressionTest, compressRandomLetters) {
   uint64_t block = 1024;
   constexpr size_t dataSize = 1024 * 1024; // 1M
 
-  // testData will be compressed in two blocks
-  char testData[dataSize];
-  generateRandomData(testData, dataSize, true);
+  // Heap-allocate to avoid stack overflow (default stack is 1MB on Windows).
+  auto testData = std::make_unique<char[]>(dataSize);
+  generateRandomData(testData.get(), dataSize, true);
   compressAndVerify(
-      kind_, memSink, block, *pool_, testData, dataSize, encrypter_);
+      kind_, memSink, block, *pool_, testData.get(), dataSize, encrypter_);
   decompressAndVerify(
-      memSink, kind_, block, testData, dataSize, *pool_, decrypter_);
+      memSink, kind_, block, testData.get(), dataSize, *pool_, decrypter_);
 }
 
 TEST_P(CompressionTest, compressRandomBytes) {
@@ -232,13 +232,13 @@ TEST_P(CompressionTest, compressRandomBytes) {
   uint64_t block = 1024;
   constexpr size_t dataSize = 1024 * 1024; // 1M
 
-  // testData will be compressed in two blocks
-  char testData[dataSize];
-  generateRandomData(testData, dataSize, false);
+  // Heap-allocate to avoid stack overflow (default stack is 1MB on Windows).
+  auto testData = std::make_unique<char[]>(dataSize);
+  generateRandomData(testData.get(), dataSize, false);
   compressAndVerify(
-      kind_, memSink, block, *pool_, testData, dataSize, encrypter_);
+      kind_, memSink, block, *pool_, testData.get(), dataSize, encrypter_);
   decompressAndVerify(
-      memSink, kind_, block, testData, dataSize, *pool_, decrypter_);
+      memSink, kind_, block, testData.get(), dataSize, *pool_, decrypter_);
 }
 
 void verifyProto(
@@ -387,8 +387,8 @@ TEST_P(RecordPositionTest, testRecordPosition) {
 }
 
 TEST_P(CompressionTest, getCompressionBufferOOM) {
-  MemorySink memSink(10L << 20, {.pool = pool_.get()});
-  const uint64_t compressBlockSize{2L << 20};
+  MemorySink memSink(10LL << 20, {.pool = pool_.get()});
+  const uint64_t compressBlockSize{2LL << 20};
 
   struct {
     bool oomOnNextCall;
@@ -415,8 +415,8 @@ TEST_P(CompressionTest, getCompressionBufferOOM) {
         config,
         memoryManager()->addRootPool(
             "oomOnCompression",
-            kind_ == facebook::velox::common::CompressionKind_NONE ? 3L << 20
-                                                                   : 6L << 20)};
+            kind_ == facebook::velox::common::CompressionKind_NONE ? 3LL << 20
+                                                                   : 6LL << 20)};
     context.initBuffer();
 
     DataBufferHolder holder{

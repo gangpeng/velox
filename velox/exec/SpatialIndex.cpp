@@ -142,7 +142,8 @@ SpatialIndex::SpatialIndex(
 
 std::vector<vector_size_t> SpatialIndex::query(const Envelope& queryEnv) const {
   std::vector<vector_size_t> result;
-  if (!Envelope::intersects(queryEnv, bounds_)) {
+  if (levels_.empty() || rowIndices_.empty() ||
+      !Envelope::intersects(queryEnv, bounds_)) {
     return result;
   }
 

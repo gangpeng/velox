@@ -30,9 +30,23 @@
 // TCompactProtocol requires some #defines to work right.
 #define SIGNED_RIGHT_SHIFT_IS 1
 #define ARITHMETIC_RIGHT_SHIFT 1
+
+// On Windows, guard against sockaddr_un redefinition between Folly and afunix.h.
+#ifdef _WIN32
+#ifndef _AFUNIX_
+#define _AFUNIX_
+#define _VELOX_AFUNIX_GUARD
+#endif
+#endif
+
 #include <thrift/TApplicationException.h>
 #include <thrift/protocol/TCompactProtocol.h>
 #include <thrift/transport/TBufferTransports.h>
+
+#ifdef _VELOX_AFUNIX_GUARD
+#undef _AFUNIX_
+#undef _VELOX_AFUNIX_GUARD
+#endif
 
 #include "velox/common/base/Exceptions.h"
 #include "velox/dwio/parquet/writer/arrow/Exception.h"

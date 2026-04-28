@@ -17,6 +17,7 @@
 #pragma once
 
 #include <chrono>
+#include <filesystem>
 
 #include "velox/common/config/Config.h"
 #include "velox/common/file/File.h"
@@ -166,6 +167,11 @@ class WriteFileSink final : public FileSink {
 class LocalFileSink : public FileSink {
  public:
   LocalFileSink(const std::string& name, const Options& options);
+
+  /// Convenience constructor accepting std::filesystem::path (MSVC does not
+  /// implicitly convert fs::path to std::string).
+  LocalFileSink(const std::filesystem::path& path, const Options& options)
+      : LocalFileSink(path.string(), options) {}
 
   ~LocalFileSink() override {
     destroy();

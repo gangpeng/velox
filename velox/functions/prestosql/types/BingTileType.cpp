@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#ifdef _MSC_VER
+#define _USE_MATH_DEFINES
+#endif
 #include "velox/functions/prestosql/types/BingTileType.h"
 #include <folly/Expected.h>
 #include <algorithm>
@@ -32,7 +35,7 @@ folly::Expected<int64_t, std::string> mapSize(uint8_t zoomLevel) {
             zoomLevel,
             BingTileType::kBingTileMaxZoomLevel));
   }
-  return 256L << zoomLevel;
+  return 256LL << zoomLevel;
 }
 
 int32_t axisToCoordinates(double axis, long mapSize) {

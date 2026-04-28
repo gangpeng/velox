@@ -116,7 +116,7 @@ struct TestParam {
   }
 
   CompressionKind compressionKind() const {
-    return static_cast<CompressionKind>((value & ((1L << 40) - 1)) >> 32);
+    return static_cast<CompressionKind>((value & ((1LL << 40) - 1)) >> 32);
   }
 
   bool multiDrivers() const {
@@ -124,15 +124,15 @@ struct TestParam {
   }
 
   FileFormat fileFormat() const {
-    return static_cast<FileFormat>((value & ((1L << 24) - 1)) >> 16);
+    return static_cast<FileFormat>((value & ((1LL << 24) - 1)) >> 16);
   }
 
   TestMode testMode() const {
-    return static_cast<TestMode>((value & ((1L << 16) - 1)) >> 8);
+    return static_cast<TestMode>((value & ((1LL << 16) - 1)) >> 8);
   }
 
   CommitStrategy commitStrategy() const {
-    return static_cast<CommitStrategy>((value & ((1L << 8) - 1)));
+    return static_cast<CommitStrategy>((value & ((1LL << 8) - 1)));
   }
 
   std::string toString() const {

@@ -16,6 +16,7 @@
 
 #include <folly/Singleton.h>
 #include <folly/lang/Bits.h>
+#include <numeric>
 #include "velox/common/base/tests/GTestUtils.h"
 #include "velox/common/encode/Base64.h"
 #include "velox/common/file/FileSystems.h"

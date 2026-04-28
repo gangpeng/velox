@@ -69,9 +69,9 @@ class DecimalAverageAggregate {
       exec::out_type<Row<int128_t, int64_t>>& out,
       exec::optional_arg_type<TInputType> in) {
     if (in.has_value()) {
-      out.copy_from(std::make_tuple(in.value(), 1));
+      out.copy_from(std::make_tuple(static_cast<int128_t>(in.value()), static_cast<int64_t>(1)));
     } else {
-      out.copy_from(std::make_tuple(0, 0));
+      out.copy_from(std::make_tuple(static_cast<int128_t>(0), static_cast<int64_t>(0)));
     }
     return true;
   }

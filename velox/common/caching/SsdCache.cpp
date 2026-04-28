@@ -22,6 +22,7 @@
 #include "velox/common/testutil/TestValue.h"
 #include "velox/common/time/Timer.h"
 
+#include <cctype>
 #include <filesystem>
 
 using facebook::velox::common::testutil::TestValue;
@@ -36,9 +37,17 @@ SsdCache::SsdCache(const Config& config)
       maxEntries_(config.maxEntries) {
   // Make sure the given path of Ssd files has the prefix for local file system.
   // Local file system would be derived based on the prefix.
+  // On Unix, paths start with '/'. On Windows, paths start with a drive letter
+  // like 'C:\' or 'C:/'. The faulty: prefix is used in tests.
+  auto isUnixAbsolute = filePrefix_.find('/') == 0;
+  auto isWindowsAbsolute = filePrefix_.size() >= 3 &&
+      std::isalpha(static_cast<unsigned char>(filePrefix_[0])) &&
+      filePrefix_[1] == ':' &&
+      (filePrefix_[2] == '/' || filePrefix_[2] == '\\');
+  auto isFaultyPrefix = filePrefix_.find("faulty:/") == 0;
   VELOX_CHECK(
-      filePrefix_.find('/') == 0 || filePrefix_.find("faulty:/") == 0,
-      "Ssd path '{}' does not start with '/' that points to local file system.",
+      isUnixAbsolute || isWindowsAbsolute || isFaultyPrefix,
+      "Ssd path '{}' does not start with '/' or a drive letter that points to local file system.",
       filePrefix_);
   VELOX_CHECK_NOT_NULL(executor_);
 

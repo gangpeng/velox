@@ -73,7 +73,7 @@ class RleBpDecoderTest {
   }
 
   void populateInputValues() {
-    auto maxValue = (1L << bitWidth_) - 1;
+    auto maxValue = (1LL << bitWidth_) - 1;
 
     for (auto j = 0; j < numValues_; j++) {
       inputValues_[j] = rand() % maxValue;

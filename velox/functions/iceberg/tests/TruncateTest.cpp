@@ -176,8 +176,8 @@ TEST_F(TruncateTest, decimal) {
   EXPECT_EQ(truncate<int64_t>(DECIMAL(5, 2), 3, 5), 3);
   EXPECT_EQ(truncate<int64_t>(DECIMAL(10, 4), 10, 123453482), 123453480);
   EXPECT_EQ(truncate<int64_t>(DECIMAL(6, 4), 10, -500), -500);
-  EXPECT_EQ(truncate<int128_t>(DECIMAL(38, 2), 10, 5), 0);
-  EXPECT_EQ(truncate<int128_t>(DECIMAL(38, 2), 10, -5), -10);
+  EXPECT_TRUE(truncate<int128_t>(DECIMAL(38, 2), 10, 5) == int128_t(0));
+  EXPECT_TRUE(truncate<int128_t>(DECIMAL(38, 2), 10, -5) == int128_t(-10));
 }
 } // namespace
 } // namespace facebook::velox::functions::iceberg

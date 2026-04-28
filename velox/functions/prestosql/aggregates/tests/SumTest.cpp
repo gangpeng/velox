@@ -195,7 +195,7 @@ TEST_F(SumTest, sumDecimalOverflow) {
   // Short decimals do not overflow easily.
   std::vector<int64_t> shortDecimalInput;
   for (int i = 0; i < 10'000; ++i) {
-    shortDecimalInput.push_back(DecimalUtil::kShortDecimalMax);
+    shortDecimalInput.push_back(static_cast<int64_t>(DecimalUtil::kShortDecimalMax));
   }
   auto input = makeRowVector(
       {makeFlatVector<int64_t>(shortDecimalInput, DECIMAL(17, 5))});

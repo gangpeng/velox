@@ -16,6 +16,7 @@
 
 #include "velox/common/process/Profiler.h"
 #include "velox/common/file/File.h"
+#include "velox/common/process/ProcessBase.h"
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
@@ -23,10 +24,12 @@
 #include <mutex>
 #include <thread>
 
+#ifndef _WIN32
 #include <fcntl.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#endif
 
 DEFINE_string(profiler_tmp_dir, "/tmp", "Writable temp for perf.data");
 
@@ -81,6 +84,7 @@ void checkSafe(const std::string& str) {
   }
 }
 
+#ifndef _WIN32
 void testWritable(const std::string& dir) {
   auto testPath = fmt::format("{}/test", dir);
   int32_t fd =
@@ -116,8 +120,10 @@ std::string timeString(time_t seconds) {
   strftime(temp, sizeof(temp), "%Y-%m-%d_%H:%M:%S", &tm);
   return std::string(temp);
 }
+#endif // !_WIN32
 } // namespace
 
+#ifndef _WIN32
 void Profiler::copyToResult(const std::string* data) {
   char* buffer;
   int32_t resultSize;
@@ -300,6 +306,7 @@ void Profiler::threadFunction() {
     stopSample(std::move(sampleThread)); // NOLINT
   }
 }
+#endif // !_WIN32
 
 bool Profiler::isRunning() {
   std::lock_guard<std::mutex> l(profileMutex_);
@@ -325,9 +332,13 @@ void Profiler::start(
   }
   checkSafe(FLAGS_profiler_tmp_dir);
   checkSafe(FLAGS_profiler_perf_flags);
+#ifndef _WIN32
   char temp[1000] = {};
   gethostname(temp, sizeof(temp) - 1);
   hostname = std::string(temp);
+#else
+  hostname = velox::process::getHostName();
+#endif
   fileSystem_ = velox::filesystems::getFileSystem(path, nullptr);
   if (!fileSystem_) {
     LOG(ERROR) << "PROFILE: Failed to find file system for " << path
@@ -337,7 +348,9 @@ void Profiler::start(
   makeProfileDir(path);
   atexit(Profiler::stop);
   LOG(INFO) << "PROFILE: Starting profiling to " << path;
+#ifndef _WIN32
   profileThread_ = std::thread([]() { threadFunction(); });
+#endif
 }
 
 void Profiler::stop() {

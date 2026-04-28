@@ -423,7 +423,12 @@ TEST_F(HashStringAllocatorTest, stlAllocator) {
         data.push_back(i);
       }
     }
+#ifdef _WIN32
+    // MSVC std::vector has smaller allocation overhead.
+    EXPECT_LE(90'000, counter);
+#else
     EXPECT_LE(128 * 1024, counter);
+#endif
     for (auto i = 0; i < 10'000; i++) {
       ASSERT_EQ(i, data[i]);
     }

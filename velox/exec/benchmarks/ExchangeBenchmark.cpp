@@ -325,7 +325,7 @@ class ExchangeBenchmark : public VectorTestBase {
   }
 
  private:
-  static constexpr int64_t kMaxMemory = 6UL << 30; // 6GB
+  static constexpr int64_t kMaxMemory = 6ULL << 30; // 6GB
 
   static std::string
   makeTaskId(int32_t iteration, const std::string& prefix, int num) {

@@ -29,7 +29,7 @@
 #include <folly/Random.h>
 #include <folly/init/Init.h>
 
-#include <duckdb.hpp> // @manual
+#include "velox/duckdb/conversion/DuckDBIncludes.h"
 
 using namespace folly;
 using namespace facebook::velox;

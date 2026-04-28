@@ -38,7 +38,7 @@ struct DecimalCeilFunction {
   template <typename R, typename A>
   void call(R& out, const A& a) {
     const auto increment = (a % rescaleFactor_) > 0 ? 1 : 0;
-    out = a / rescaleFactor_ + increment;
+    out = static_cast<R>(a / rescaleFactor_ + increment);
   }
 
  private:

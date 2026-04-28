@@ -243,7 +243,7 @@ class HashJoinPrepareJoinTableBenchmark : public VectorTestBase {
 void initArrayModeBenchmarkParams(
     std::vector<HashTableBenchmarkParams>& params) {
   TypePtr oneKeyType{ROW({"k1"}, {BIGINT()})};
-  std::vector<int64_t> buildSizeVector = {100000, (2L << 20) - 3};
+  std::vector<int64_t> buildSizeVector = {100000, (2LL << 20) - 3};
   std::vector<int64_t> numTablesVector = {1, 8};
   std::vector<int64_t> dupFactorVector = {1, 8};
   for (auto buildSize : buildSizeVector) {
@@ -263,7 +263,7 @@ void initArrayModeBenchmarkParams(
 void initNormalizedKeyModeBenchmarkParams(
     std::vector<HashTableBenchmarkParams>& params) {
   TypePtr twoKeyType{ROW({"k1", "k2"}, {BIGINT(), BIGINT()})};
-  std::vector<int64_t> buildSizeVector = {100000, (2L << 20) - 3, 2L << 23};
+  std::vector<int64_t> buildSizeVector = {100000, (2LL << 20) - 3, 2LL << 23};
   std::vector<int64_t> numTablesVector = {1, 8};
   std::vector<int64_t> dupFactorVector = {1, 8};
   for (auto buildSize : buildSizeVector) {
@@ -283,7 +283,7 @@ void initNormalizedKeyModeBenchmarkParams(
 void initHashModeBenchmarkParams(
     std::vector<HashTableBenchmarkParams>& params) {
   TypePtr threeKeyType{ROW({"k1", "k2", "k3"}, {BIGINT(), BIGINT(), BIGINT()})};
-  std::vector<int64_t> buildSizeVector = {(2L << 20) - 3, 2L << 23};
+  std::vector<int64_t> buildSizeVector = {(2LL << 20) - 3, 2LL << 23};
   std::vector<int64_t> numTablesVector = {1, 8};
   std::vector<int64_t> dupFactorVector = {1, 8};
   for (auto buildSize : buildSizeVector) {
@@ -305,7 +305,7 @@ int main(int argc, char** argv) {
   folly::Init init{&argc, &argv};
   memory::MemoryManager::Options options;
   options.useMmapAllocator = true;
-  options.allocatorCapacity = 10UL << 30;
+  options.allocatorCapacity = 10ULL << 30;
   options.useMmapArena = true;
   options.mmapArenaCapacityRatio = 1;
   memory::MemoryManager::initialize(options);

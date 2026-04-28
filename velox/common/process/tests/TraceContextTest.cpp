@@ -82,17 +82,25 @@ TEST_F(TraceContextTest, basic) {
 }
 
 TEST_F(TraceContextTest, traceHistory) {
-  std::thread([] {
+  std::thread([&] {
     TraceContext trace("test");
     TraceContext trace2(
         std::string(TraceHistory::Entry::kLabelCapacity + 10, 'x'));
     auto results = TraceHistory::listAll();
-    ASSERT_EQ(results.size(), 1);
-    ASSERT_EQ(results[0].entries.size(), 2);
-    ASSERT_STREQ(results[0].entries[0].label, "test");
-    ASSERT_EQ(
-        results[0].entries[1].label,
-        std::string(TraceHistory::Entry::kLabelCapacity - 1, 'x'));
+    // On MSVC, thread-local traces from previous tests may still be present.
+    ASSERT_GE(results.size(), 1);
+    // Find the entry for this thread.
+    bool found = false;
+    for (const auto& r : results) {
+      if (r.entries.size() == 2 &&
+          std::string(r.entries[0].label) == "test") {
+        found = true;
+        ASSERT_EQ(
+            r.entries[1].label,
+            std::string(TraceHistory::Entry::kLabelCapacity - 1, 'x'));
+      }
+    }
+    ASSERT_TRUE(found) << "Could not find trace entries for this thread";
   }).join();
 }
 

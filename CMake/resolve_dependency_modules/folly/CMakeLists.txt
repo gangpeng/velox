@@ -52,8 +52,14 @@ FetchContent_Declare(
 
 set(BUILD_SHARED_LIBS ${VELOX_BUILD_SHARED})
 
-# Enable INT128 support
-set(FOLLY_HAVE_INT128_T ON)
+# Enable INT128 support. MSVC does not have the native __int128 keyword that
+# Folly's Traits.h and Hash.h use in their specializations, so we must disable
+# it there. Velox provides its own 128-bit support via absl::int128.
+if(NOT MSVC)
+  set(FOLLY_HAVE_INT128_T ON)
+else()
+  set(FOLLY_HAVE_INT128_T OFF)
+endif()
 
 FetchContent_MakeAvailable(folly)
 

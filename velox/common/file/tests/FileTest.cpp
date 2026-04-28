@@ -32,9 +32,20 @@ using namespace facebook::velox::common::testutil;
 using facebook::velox::common::Region;
 using namespace facebook::velox::tests::utils;
 
+// On Windows, WriteFile is a Windows API function from <windows.h> that
+// conflicts with facebook::velox::WriteFile. Use a namespace alias to
+// disambiguate.
+#ifdef _WIN32
+using VeloxWriteFile = facebook::velox::WriteFile;
+using VeloxReadFile = facebook::velox::ReadFile;
+#else
+using VeloxWriteFile = WriteFile;
+using VeloxReadFile = ReadFile;
+#endif
+
 constexpr int kOneMB = 1 << 20;
 
-void writeData(WriteFile* writeFile, bool useIOBuf = false) {
+void writeData(VeloxWriteFile* writeFile, bool useIOBuf = false) {
   if (useIOBuf) {
     std::unique_ptr<folly::IOBuf> buf = folly::IOBuf::copyBuffer("aaaaa");
     buf->appendToChain(folly::IOBuf::copyBuffer("bbbbb"));
@@ -62,7 +73,7 @@ TEST(FileIoContextTest, defaultCacheableIsFalse) {
   EXPECT_TRUE(cacheableContext.cacheable);
 }
 
-void writeDataWithOffset(WriteFile* writeFile) {
+void writeDataWithOffset(VeloxWriteFile* writeFile) {
   ASSERT_EQ(writeFile->size(), 0);
   writeFile->truncate(15 + kOneMB);
   std::vector<iovec> iovecs;
@@ -81,7 +92,7 @@ void writeDataWithOffset(WriteFile* writeFile) {
 }
 
 void readData(
-    ReadFile* readFile,
+    VeloxReadFile* readFile,
     bool checkFileSize = true,
     bool testReadAsync = false) {
   if (checkFileSize) {
@@ -259,6 +270,23 @@ TEST_P(LocalFileTest, viaRegistry) {
   char buffer1[5];
   ASSERT_EQ(readFile->pread(0, 5, &buffer1), "snarf");
   fs->remove(filename);
+}
+
+TEST_P(LocalFileTest, duplicateSeparatorsInPath) {
+  auto tempFolder = TempDirectoryPath::create(useFaultyFs_);
+  const auto path = fmt::format("{}//nested//file", tempFolder->getPath());
+  auto fs = filesystems::getFileSystem(path, {});
+
+  filesystems::FileOptions options;
+  options.shouldCreateParentDirectories = true;
+  {
+    auto writeFile = fs->openFileForWrite(path, options);
+    writeFile->append("snarf");
+  }
+
+  auto readFile = fs->openFileForRead(path);
+  char buffer[5];
+  ASSERT_EQ(readFile->pread(0, 5, &buffer), "snarf");
 }
 
 TEST_P(LocalFileTest, rename) {
@@ -526,12 +554,12 @@ class FaultyFsTest : public ::testing::Test {
     fs_->clearFileFaultInjections();
   }
 
-  void writeData(WriteFile* file) {
+  void writeData(VeloxWriteFile* file) {
     file->append(std::string_view(buffer_));
     file->flush();
   }
 
-  void readData(ReadFile* file, bool useReadv = false) {
+  void readData(VeloxReadFile* file, bool useReadv = false) {
     std::vector<char> readBuf(buffer_.size());
     if (!useReadv) {
       file->pread(0, buffer_.size(), readBuf.data());
@@ -744,6 +772,9 @@ TEST_F(FaultyFsTest, fileWriteErrorInjection) {
   {
     auto writeFile = fs_->openFileForWrite(writeFilePath_, {});
     VELOX_ASSERT_THROW(writeFile->append("hello"), "InjectedFaultFileError");
+    // Windows does not allow deleting an open file, even after an injected
+    // append failure.
+    writeFile.reset();
     fs_->remove(writeFilePath_);
   }
   // Set error for all kinds of operations.
@@ -751,6 +782,9 @@ TEST_F(FaultyFsTest, fileWriteErrorInjection) {
   {
     auto writeFile = fs_->openFileForWrite(writeFilePath_, {});
     VELOX_ASSERT_THROW(writeFile->append("hello"), "InjectedFaultFileError");
+    // Windows does not allow deleting an open file, even after an injected
+    // append failure.
+    writeFile.reset();
     fs_->remove(writeFilePath_);
   }
 }
@@ -767,6 +801,8 @@ TEST_F(FaultyFsTest, fileWriteDelayInjection) {
       writeFile->append("hello");
     }
     ASSERT_GE(readDurationUs, injectDelay);
+    // Windows does not allow deleting an open file.
+    writeFile.reset();
     fs_->remove(writeFilePath_);
   }
 }

@@ -236,7 +236,7 @@ int64_t cardinalityImpl(const DenseHllView& hll) {
   double sum = 0;
   for (int i = 0; i < numBuckets; i++) {
     int value = hll.getValue(i);
-    sum += 1.0 / (1L << value);
+    sum += 1.0 / (1LL << value);
   }
 
   double estimate = (alpha(hll.indexBitLength) * numBuckets * numBuckets) / sum;

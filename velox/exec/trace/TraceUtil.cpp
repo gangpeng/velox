@@ -16,6 +16,8 @@
 
 #include "velox/exec/trace/TraceUtil.h"
 
+#include <cctype>
+
 #include <folly/json.h>
 #include <utility>
 
@@ -32,12 +34,85 @@ namespace {
 std::string findLastPathNode(const std::string& path) {
   std::vector<std::string> pathNodes;
   folly::split("/", path, pathNodes);
+#ifdef _WIN32
+  // On Windows, paths may use backslash separators.
+  std::vector<std::string> refined;
+  for (auto& node : pathNodes) {
+    std::vector<std::string> subNodes;
+    folly::split("\\", node, subNodes);
+    for (auto& s : subNodes) {
+      refined.push_back(std::move(s));
+    }
+  }
+  pathNodes = std::move(refined);
+#endif
   while (!pathNodes.empty() && pathNodes.back().empty()) {
     pathNodes.pop_back();
   }
   VELOX_CHECK(!pathNodes.empty(), "No valid path nodes found from {}", path);
   return pathNodes.back();
 }
+
+#ifdef _WIN32
+bool isSafeTracePathCharacter(unsigned char c) {
+  return std::isalnum(c) || c == '-' || c == '_' || c == '.';
+}
+
+std::string encodeTracePathNode(const std::string& value) {
+  std::string encoded;
+  encoded.reserve(value.size());
+  for (const unsigned char c : value) {
+    if (isSafeTracePathCharacter(c)) {
+      encoded.push_back(static_cast<char>(c));
+    } else {
+      // Task IDs can contain URI-style separators such as "local://", which
+      // are not valid Windows path components. Percent-encode only the path
+      // segment so callers can continue using the original task ID.
+      encoded += fmt::format("%{:02X}", c);
+    }
+  }
+  return encoded;
+}
+
+int hexValue(char c) {
+  if (c >= '0' && c <= '9') {
+    return c - '0';
+  }
+  if (c >= 'a' && c <= 'f') {
+    return c - 'a' + 10;
+  }
+  if (c >= 'A' && c <= 'F') {
+    return c - 'A' + 10;
+  }
+  return -1;
+}
+
+std::string decodeTracePathNode(const std::string& value) {
+  std::string decoded;
+  decoded.reserve(value.size());
+  for (size_t i = 0; i < value.size(); ++i) {
+    if (value[i] == '%' && i + 2 < value.size()) {
+      const auto high = hexValue(value[i + 1]);
+      const auto low = hexValue(value[i + 2]);
+      if (high >= 0 && low >= 0) {
+        decoded.push_back(static_cast<char>((high << 4) | low));
+        i += 2;
+        continue;
+      }
+    }
+    decoded.push_back(value[i]);
+  }
+  return decoded;
+}
+#else
+const std::string& encodeTracePathNode(const std::string& value) {
+  return value;
+}
+
+const std::string& decodeTracePathNode(const std::string& value) {
+  return value;
+}
+#endif
 
 std::unordered_map<std::string, TraceNodeFactory>& traceNodeRegistry() {
   static std::unordered_map<std::string, TraceNodeFactory> registry;
@@ -90,7 +165,7 @@ std::string getTaskTraceDirectory(
     const std::string& taskId) {
   auto queryTraceDir = getQueryTraceDirectory(traceDir, queryId);
 
-  return fmt::format("{}/{}", queryTraceDir, taskId);
+  return fmt::format("{}/{}", queryTraceDir, encodeTracePathNode(taskId));
 }
 
 std::string getTaskTraceMetaFilePath(const std::string& taskTraceDir) {
@@ -148,7 +223,7 @@ std::vector<std::string> getTaskIds(
   const auto taskDirs = fs->list(queryTraceDir);
   std::vector<std::string> taskIds;
   for (const auto& taskDir : taskDirs) {
-    taskIds.emplace_back(findLastPathNode(taskDir));
+    taskIds.emplace_back(decodeTracePathNode(findLastPathNode(taskDir)));
   }
   return taskIds;
 }

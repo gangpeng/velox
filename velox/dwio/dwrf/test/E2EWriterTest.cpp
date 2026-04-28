@@ -1718,7 +1718,7 @@ TEST_F(E2EWriterTest, memoryConfigError) {
   const common::SpillConfig spillConfig = getSpillConfig(10, 20);
   options.spillConfig = &spillConfig;
   auto writerPool = memory::memoryManager()->addRootPool(
-      "memoryReclaim", 1L << 30, exec::MemoryReclaimer::create());
+      "memoryReclaim", 1LL << 30, exec::MemoryReclaimer::create());
   auto dwrfPool = writerPool->addAggregateChild("writer");
   auto sinkPool =
       writerPool->addLeafChild("sink", true, exec::MemoryReclaimer::create());
@@ -1752,8 +1752,8 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimOnWrite) {
     SCOPED_TRACE(fmt::format("enableReclaim {}", enableReclaim));
 
     auto config = std::make_shared<dwrf::Config>();
-    config->set<uint64_t>(dwrf::Config::STRIPE_SIZE, 1L << 30);
-    config->set<uint64_t>(dwrf::Config::MAX_DICTIONARY_SIZE, 1L << 30);
+    config->set<uint64_t>(dwrf::Config::STRIPE_SIZE, 1LL << 30);
+    config->set<uint64_t>(dwrf::Config::MAX_DICTIONARY_SIZE, 1LL << 30);
 
     tsan_atomic<bool> nonReclaimableSection{false};
     dwrf::WriterOptions options;
@@ -1764,7 +1764,7 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimOnWrite) {
       options.spillConfig = &spillConfig;
     }
     auto writerPool = memory::memoryManager()->addRootPool(
-        "memoryReclaim", 1L << 30, exec::MemoryReclaimer::create());
+        "memoryReclaim", 1LL << 30, exec::MemoryReclaimer::create());
     auto dwrfPool = writerPool->addAggregateChild("writer");
     auto sinkPool =
         writerPool->addLeafChild("sink", true, exec::MemoryReclaimer::create());
@@ -1807,7 +1807,7 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimOnWrite) {
     const auto oldUsedBytes = writerPool->usedBytes();
     {
       memory::ScopedMemoryArbitrationContext arbitrationCtx(writerPool.get());
-      writerPool->reclaim(1L << 30, 0, stats);
+      writerPool->reclaim(1LL << 30, 0, stats);
     }
     ASSERT_EQ(stats.numNonReclaimableAttempts, 0);
     // We don't expect the capacity change by memory reclaim but only the used
@@ -1835,18 +1835,18 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimOnWrite) {
     }
     if (!enableReclaim) {
       ASSERT_FALSE(reservationCalled);
-      ASSERT_EQ(writerPool->reclaim(1L << 30, 0, stats), 0);
+      ASSERT_EQ(writerPool->reclaim(1LL << 30, 0, stats), 0);
       ASSERT_EQ(stats, memory::MemoryReclaimer::Stats{});
     } else {
       ASSERT_TRUE(reservationCalled);
       writer->testingNonReclaimableSection() = true;
-      ASSERT_EQ(writerPool->reclaim(1L << 30, 0, stats), 0);
+      ASSERT_EQ(writerPool->reclaim(1LL << 30, 0, stats), 0);
       ASSERT_EQ(stats.numNonReclaimableAttempts, 1);
       writer->testingNonReclaimableSection() = false;
       stats.numNonReclaimableAttempts = 0;
       {
         memory::ScopedMemoryArbitrationContext arbitrationCtx(writerPool.get());
-        const auto reclaimedBytes = writerPool->reclaim(1L << 30, 0, stats);
+        const auto reclaimedBytes = writerPool->reclaim(1LL << 30, 0, stats);
         ASSERT_GT(reclaimedBytes, 0);
       }
       ASSERT_EQ(stats.numNonReclaimableAttempts, 0);
@@ -1879,8 +1879,8 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimOnFlush) {
     SCOPED_TRACE(fmt::format("enableReclaim {}", enableReclaim));
 
     auto config = std::make_shared<dwrf::Config>();
-    config->set<uint64_t>(dwrf::Config::STRIPE_SIZE, 1L << 30);
-    config->set<uint64_t>(dwrf::Config::MAX_DICTIONARY_SIZE, 1L << 30);
+    config->set<uint64_t>(dwrf::Config::STRIPE_SIZE, 1LL << 30);
+    config->set<uint64_t>(dwrf::Config::MAX_DICTIONARY_SIZE, 1LL << 30);
 
     dwrf::WriterOptions options;
     options.schema = type;
@@ -1891,7 +1891,7 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimOnFlush) {
       options.spillConfig = &spillConfig;
     }
     auto writerPool = memory::memoryManager()->addRootPool(
-        "memoryReclaim", 1L << 30, exec::MemoryReclaimer::create());
+        "memoryReclaim", 1LL << 30, exec::MemoryReclaimer::create());
     auto dwrfPool = writerPool->addAggregateChild("writer");
     auto sinkPool =
         writerPool->addLeafChild("sink", true, exec::MemoryReclaimer::create());
@@ -1983,8 +1983,8 @@ TEST_F(E2EWriterTest, memoryReclaimAfterClose) {
     SCOPED_TRACE(testData.debugString());
 
     auto config = std::make_shared<dwrf::Config>();
-    config->set<uint64_t>(dwrf::Config::STRIPE_SIZE, 1L << 30);
-    config->set<uint64_t>(dwrf::Config::MAX_DICTIONARY_SIZE, 1L << 30);
+    config->set<uint64_t>(dwrf::Config::STRIPE_SIZE, 1LL << 30);
+    config->set<uint64_t>(dwrf::Config::MAX_DICTIONARY_SIZE, 1LL << 30);
 
     dwrf::WriterOptions options;
     options.schema = type;
@@ -1995,7 +1995,7 @@ TEST_F(E2EWriterTest, memoryReclaimAfterClose) {
       options.spillConfig = &spillConfig;
     }
     auto writerPool = memory::memoryManager()->addRootPool(
-        "memoryReclaim", 1L << 30, exec::MemoryReclaimer::create());
+        "memoryReclaim", 1LL << 30, exec::MemoryReclaimer::create());
     auto dwrfPool = writerPool->addAggregateChild("writer");
     auto sinkPool =
         writerPool->addLeafChild("sink", true, exec::MemoryReclaimer::create());
@@ -2031,7 +2031,7 @@ TEST_F(E2EWriterTest, memoryReclaimAfterClose) {
     VELOX_ASSERT_THROW(writer->flush(), "Writer is not running");
 
     memory::MemoryReclaimer::Stats stats;
-    writerPool->reclaim(1L << 30, 0, stats);
+    writerPool->reclaim(1LL << 30, 0, stats);
     if (testData.abort || !testData.canReclaim) {
       ASSERT_EQ(stats.numNonReclaimableAttempts, 0);
     } else {
@@ -2062,8 +2062,8 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimDuringInit) {
     SCOPED_TRACE(fmt::format("reclaimable {}", reclaimable));
 
     auto config = std::make_shared<dwrf::Config>();
-    config->set<uint64_t>(dwrf::Config::STRIPE_SIZE, 1L << 30);
-    config->set<uint64_t>(dwrf::Config::MAX_DICTIONARY_SIZE, 1L << 30);
+    config->set<uint64_t>(dwrf::Config::STRIPE_SIZE, 1LL << 30);
+    config->set<uint64_t>(dwrf::Config::MAX_DICTIONARY_SIZE, 1LL << 30);
 
     dwrf::WriterOptions options;
     options.schema = type;
@@ -2074,7 +2074,7 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimDuringInit) {
       options.spillConfig = &spillConfig;
     }
     auto writerPool = memory::memoryManager()->addRootPool(
-        "memoryReclaimDuringInit", 1L << 30, exec::MemoryReclaimer::create());
+        "memoryReclaimDuringInit", 1LL << 30, exec::MemoryReclaimer::create());
     auto dwrfPool = writerPool->addAggregateChild("writer");
     auto sinkPool =
         writerPool->addLeafChild("sink", true, exec::MemoryReclaimer::create());
@@ -2088,7 +2088,7 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimDuringInit) {
           ASSERT_EQ(reclaimableBytesOpt.has_value(), reclaimable);
 
           memory::MemoryReclaimer::Stats stats;
-          writerPool->reclaim(1L << 30, 0, stats);
+          writerPool->reclaim(1LL << 30, 0, stats);
           if (reclaimable) {
             ASSERT_GE(reclaimableBytesOpt.value(), 0);
             // We can't reclaim during writer init.
@@ -2141,7 +2141,7 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimThreshold) {
   for (int i = 0; i < 10; ++i) {
     vectors.push_back(fuzzer.fuzzInputRow(type));
   }
-  const std::vector<uint64_t> writerFlushThresholdSizes = {0, 1L << 30};
+  const std::vector<uint64_t> writerFlushThresholdSizes = {0, 1LL << 30};
   for (uint64_t writerFlushThresholdSize : writerFlushThresholdSizes) {
     SCOPED_TRACE(
         fmt::format(
@@ -2151,8 +2151,8 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimThreshold) {
     const common::SpillConfig spillConfig =
         getSpillConfig(10, 20, writerFlushThresholdSize);
     auto config = std::make_shared<dwrf::Config>();
-    config->set<uint64_t>(dwrf::Config::STRIPE_SIZE, 1L << 30);
-    config->set<uint64_t>(dwrf::Config::MAX_DICTIONARY_SIZE, 1L << 30);
+    config->set<uint64_t>(dwrf::Config::STRIPE_SIZE, 1LL << 30);
+    config->set<uint64_t>(dwrf::Config::MAX_DICTIONARY_SIZE, 1LL << 30);
 
     dwrf::WriterOptions options;
     options.schema = type;
@@ -2162,7 +2162,7 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimThreshold) {
     options.spillConfig = &spillConfig;
 
     auto writerPool = memory::memoryManager()->addRootPool(
-        "memoryReclaimThreshold", 1L << 30, exec::MemoryReclaimer::create());
+        "memoryReclaimThreshold", 1LL << 30, exec::MemoryReclaimer::create());
     auto dwrfPool = writerPool->addAggregateChild("writer");
     auto sinkPool =
         writerPool->addLeafChild("sink", true, exec::MemoryReclaimer::create());
@@ -2188,7 +2188,7 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimThreshold) {
       ASSERT_GT(reclaimableBytes, 0);
       {
         memory::ScopedMemoryArbitrationContext arbitrationCtx(writerPool.get());
-        ASSERT_GT(writerPool->reclaim(1L << 30, 0, stats), 0);
+        ASSERT_GT(writerPool->reclaim(1LL << 30, 0, stats), 0);
       }
       ASSERT_GT(stats.reclaimExecTimeUs, 0);
       ASSERT_GT(stats.reclaimedBytes, 0);
@@ -2198,7 +2198,7 @@ DEBUG_ONLY_TEST_F(E2EWriterTest, memoryReclaimThreshold) {
       ASSERT_EQ(reclaimableBytes, 0);
       {
         memory::ScopedMemoryArbitrationContext arbitrationCtx(writerPool.get());
-        ASSERT_EQ(writerPool->reclaim(1L << 30, 0, stats), 0);
+        ASSERT_EQ(writerPool->reclaim(1LL << 30, 0, stats), 0);
       }
       ASSERT_EQ(stats.numNonReclaimableAttempts, 0);
       ASSERT_EQ(stats.reclaimExecTimeUs, 0);

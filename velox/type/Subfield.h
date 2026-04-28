@@ -159,10 +159,10 @@ class Subfield {
 
   class LongSubscript final : public PathElement {
    public:
-    explicit LongSubscript(long index)
+    explicit LongSubscript(int64_t index)
         : PathElement(SubfieldKind::kLongSubscript), index_(index) {}
 
-    long index() const {
+    int64_t index() const {
       return index_;
     }
 
@@ -175,7 +175,7 @@ class Subfield {
     }
 
     size_t hash() const override {
-      return std::hash<long>()(index_);
+      return std::hash<int64_t>()(index_);
     }
 
     std::string toString() const override {
@@ -187,7 +187,7 @@ class Subfield {
     }
 
    private:
-    const long index_;
+    const int64_t index_;
   };
 
   class StringSubscript final : public PathElement {

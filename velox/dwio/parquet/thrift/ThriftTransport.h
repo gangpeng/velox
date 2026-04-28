@@ -16,7 +16,20 @@
 
 #pragma once
 
+// On Windows, guard against sockaddr_un redefinition between Folly and afunix.h.
+#ifdef _WIN32
+#ifndef _AFUNIX_
+#define _AFUNIX_
+#define _VELOX_AFUNIX_GUARD
+#endif
+#endif
+
 #include <thrift/transport/TVirtualTransport.h>
+
+#ifdef _VELOX_AFUNIX_GUARD
+#undef _AFUNIX_
+#undef _VELOX_AFUNIX_GUARD
+#endif
 #include "velox/dwio/common/BufferedInput.h"
 
 namespace facebook::velox::parquet::thrift {

@@ -199,7 +199,7 @@ struct DecimalModulusFunction {
     if (b < 0) {
       unsignedDivisorRescaled *= -1;
     }
-    unsignedDivisorRescaled = checkedMultiply<B>(
+    unsignedDivisorRescaled = checkedMultiply<R>(
         unsignedDivisorRescaled,
         R(DecimalUtil::kPowersOfTen[bRescale_]),
         "Decimal");
@@ -255,7 +255,7 @@ struct DecimalRoundFunction {
     auto reScaleFactor = DecimalUtil::kPowersOfTen[scale_ - n];
     DecimalUtil::divideWithRoundUp<R, A, int128_t>(
         out, a, reScaleFactor, false, 0, 0);
-    out *= reScaleFactor;
+    out = static_cast<R>(static_cast<int128_t>(out) * reScaleFactor);
   }
 
  private:
@@ -280,7 +280,7 @@ struct DecimalFloorFunction {
     const auto rescaleFactor = DecimalUtil::kPowersOfTen[scale_];
     // Round rowards -INF.
     const auto increment = (a % rescaleFactor) < 0 ? -1 : 0;
-    out = a / rescaleFactor + increment;
+    out = static_cast<R>(a / rescaleFactor + increment);
   }
 
  private:
@@ -304,7 +304,7 @@ struct DecimalCeilFunction {
     const auto rescaleFactor = DecimalUtil::kPowersOfTen[scale_];
     // Round towards +INF.
     const auto increment = (a % rescaleFactor) > 0 ? 1 : 0;
-    out = a / rescaleFactor + increment;
+    out = static_cast<R>(a / rescaleFactor + increment);
   }
 
  private:
@@ -337,9 +337,9 @@ struct DecimalTruncateFunction {
   template <typename R, typename A>
   void call(R& out, const A& a) {
     if UNLIKELY (scale_ == 0 || a == 0) {
-      out = a;
+      out = static_cast<R>(a);
     } else {
-      out = a / DecimalUtil::kPowersOfTen[scale_];
+      out = static_cast<R>(a / DecimalUtil::kPowersOfTen[scale_]);
     }
   }
 
@@ -350,7 +350,7 @@ struct DecimalTruncateFunction {
     } else if UNLIKELY (scale_ <= n) {
       out = a;
     } else {
-      out = a - (a % DecimalUtil::kPowersOfTen[scale_ - n]);
+      out = static_cast<A>(static_cast<int128_t>(a) - (static_cast<int128_t>(a) % DecimalUtil::kPowersOfTen[scale_ - n]));
     }
   }
 

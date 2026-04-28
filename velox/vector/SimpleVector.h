@@ -28,6 +28,7 @@
 #include <glog/logging.h>
 
 #include "velox/type/DecimalUtil.h"
+#include "velox/type/HugeInt.h"
 #include "velox/type/FloatingPointUtil.h"
 #include "velox/type/Type.h"
 #include "velox/vector/BaseVector.h"
@@ -407,7 +408,12 @@ class SimpleVector : public BaseVector {
         return -1;
       }
     }
-    return left < right ? -1 : left == right ? 0 : 1;
+    if constexpr (!std::is_same_v<T, ComplexType>) {
+      return left < right ? -1 : left == right ? 0 : 1;
+    } else {
+      VELOX_FAIL("comparePrimitiveAsc not supported for complex types");
+      return 0;
+    }
   }
 
  protected:

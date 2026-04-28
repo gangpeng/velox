@@ -234,6 +234,11 @@ class AggregationReplayerTest : public HiveConnectorTestBase {
 };
 
 TEST_F(AggregationReplayerTest, hashAggregationTest) {
+  gflags::FlagSaver flagSaver;
+  // TraceReplayRunner prompts in CLI mode. The test populates all flags
+  // directly, so fast mode avoids waiting on stdin during test runs.
+  FLAGS_fast = true;
+
   for (const auto& prefix : std::vector<std::string>{"", "test."}) {
     const auto data = generateInput(groupingKeys_, keyTypes_);
     const auto planWithNames =
@@ -258,7 +263,7 @@ TEST_F(AggregationReplayerTest, hashAggregationTest) {
           AssertQueryBuilder(plan)
               .config(core::QueryConfig::kQueryTraceEnabled, true)
               .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-              .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+              .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
               .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
               .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_)
               .split(makeHiveConnectorSplit(sourceFilePath->getPath()))
@@ -303,6 +308,11 @@ TEST_F(AggregationReplayerTest, hashAggregationTest) {
 }
 
 TEST_F(AggregationReplayerTest, streamingAggregateTest) {
+  gflags::FlagSaver flagSaver;
+  // TraceReplayRunner prompts in CLI mode. The test populates all flags
+  // directly, so fast mode avoids waiting on stdin during test runs.
+  FLAGS_fast = true;
+
   for (const auto& prefix : std::vector<std::string>{"", "test."}) {
     const auto data = generateInput(groupingKeys_, keyTypes_);
     const auto planWithNames =
@@ -327,7 +337,7 @@ TEST_F(AggregationReplayerTest, streamingAggregateTest) {
           AssertQueryBuilder(plan)
               .config(core::QueryConfig::kQueryTraceEnabled, true)
               .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-              .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+              .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
               .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
               .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_)
               .split(makeHiveConnectorSplit(sourceFilePath->getPath()))

@@ -15,6 +15,7 @@
  */
 
 #include <cstdint>
+#include <numeric>
 #include <optional>
 #include <string>
 
@@ -1072,7 +1073,9 @@ TEST_F(SimpleFunctionTest, variadicReuseNoArgs) {
 }
 
 TEST_F(SimpleFunctionTest, variadicReuseNoArgsDifferentType) {
-  std::string functionName = "function_with_variadic";
+  // Use a distinct name because the simple function registry keeps signatures
+  // registered by earlier tests in this binary.
+  std::string functionName = "function_with_variadic_i32";
   registerFunction<FunctionWithVariadic, int32_t, Variadic<int64_t>>(
       {functionName});
 
@@ -1309,7 +1312,7 @@ struct DecimalPlusOneFunction {
 
   template <typename R, typename A>
   void call(R& out, A a) {
-    out = a + DecimalUtil::kPowersOfTen[scale_];
+    out = static_cast<R>(a + DecimalUtil::kPowersOfTen[scale_]);
   }
 
  private:
@@ -1330,7 +1333,7 @@ struct DecimalPlusTwoFunction {
 
   template <typename R, typename A>
   void call(R& out, A a) {
-    out = a + 2 * DecimalUtil::kPowersOfTen[scale_];
+    out = static_cast<R>(a + 2 * DecimalUtil::kPowersOfTen[scale_]);
   }
 
  private:
@@ -1378,7 +1381,8 @@ TEST_F(SimpleFunctionTest, decimals) {
       // 12.34, 25.67
       makeFlatVector<int64_t>({1234, 2567}, DECIMAL(10, 2)),
       // 0.1234, 0.2567
-      makeFlatVector<int128_t>({1234, 2567}, DECIMAL(30, 4)),
+      makeFlatVector<int128_t>(
+          {int128_t(1234), int128_t(2567)}, DECIMAL(30, 4)),
   });
 
   auto result = evaluate("decimal_plus_one(c0)", data);
@@ -1390,7 +1394,8 @@ TEST_F(SimpleFunctionTest, decimals) {
   result = evaluate("decimal_plus_one(c1)", data);
 
   // 1.1234, 1.2567
-  expected = makeFlatVector<int128_t>({11234, 12567}, DECIMAL(30, 4));
+  expected = makeFlatVector<int128_t>(
+      {int128_t(11234), int128_t(12567)}, DECIMAL(30, 4));
   assertEqualVectors(expected, result);
 
   // Verify overwrite behavior. Register a different function using the same
@@ -1422,7 +1427,8 @@ TEST_F(SimpleFunctionTest, decimals) {
   result = evaluate("decimal_plus_one(c1)", data);
 
   // 1.1234, 1.2567
-  expected = makeFlatVector<int128_t>({11234, 12567}, DECIMAL(30, 4));
+  expected = makeFlatVector<int128_t>(
+      {int128_t(11234), int128_t(12567)}, DECIMAL(30, 4));
   assertEqualVectors(expected, result);
 }
 

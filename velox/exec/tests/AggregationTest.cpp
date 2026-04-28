@@ -1670,7 +1670,7 @@ TEST_F(AggregationTest, disableNonBooleanMasks) {
 TEST_F(AggregationTest, outputBatchSizeCheckWithSpill) {
   const int numVectors = 5;
   const int vectorSize = 20;
-  const std::string strValue(1L << 20, 'a');
+  const std::string strValue(1LL << 20, 'a');
 
   std::vector<RowVectorPtr> largeVectors;
   std::vector<RowVectorPtr> smallVectors;
@@ -1761,7 +1761,7 @@ TEST_F(AggregationTest, outputBatchSizeCheckWithSpill) {
 TEST_F(AggregationTest, outputBatchSizeCheckWithSpillForOrderedAggr) {
   const int numVectors = 5;
   const int vectorSize = 20;
-  const std::string strValue(1L << 20, 'a'); // 1MB
+  const std::string strValue(1LL << 20, 'a'); // 1MB
 
   std::vector<RowVectorPtr> vectors;
   for (int i = 0; i < numVectors; ++i) {
@@ -1787,8 +1787,8 @@ TEST_F(AggregationTest, outputBatchSizeCheckWithSpillForOrderedAggr) {
     }
   } testSettings[] = {
       {1, std::numeric_limits<uint32_t>::max(), 5},
-      {std::numeric_limits<vector_size_t>::max(), 15L << 20, 5},
-      {std::numeric_limits<vector_size_t>::max(), 35L << 20, 3}};
+      {std::numeric_limits<vector_size_t>::max(), 15LL << 20, 5},
+      {std::numeric_limits<vector_size_t>::max(), 35LL << 20, 3}};
 
   for (const auto& testData : testSettings) {
     SCOPED_TRACE(testData.debugString());
@@ -1875,7 +1875,7 @@ TEST_F(AggregationTest, spillDuringOutputProcessing) {
 
 TEST_F(AggregationTest, outputBatchSizeCheckWithoutSpill) {
   const int vectorSize = 100;
-  const std::string strValue(1L << 20, 'a');
+  const std::string strValue(1LL << 20, 'a');
 
   RowVectorPtr largeVector = makeRowVector(
       {makeFlatVector<int32_t>(vectorSize, [&](auto row) { return row; }),

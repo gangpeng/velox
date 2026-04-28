@@ -69,7 +69,7 @@ DEFINE_int32(
     72,
     "The number of threads to run queries concurrently for each iteration.");
 
-DEFINE_int64(arbitrator_capacity, 256L << 20, "Arbitrator capacity in bytes.");
+DEFINE_int64(arbitrator_capacity, 256LL << 20, "Arbitrator capacity in bytes.");
 
 DEFINE_int32(
     global_arbitration_pct,

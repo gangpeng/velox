@@ -20,9 +20,11 @@
 #include "velox/common/file/FileSystems.h"
 #include "velox/dwio/common/exception/Exception.h"
 
+#ifndef _WIN32
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#endif
 
 namespace facebook::velox::dwio::common {
 namespace {
@@ -43,6 +45,12 @@ std::unique_ptr<FileSink> localFileSink(
   if (filePath.starts_with(kFileSep)) {
     return std::make_unique<LocalFileSink>(filePath, options);
   }
+#ifdef _WIN32
+  // On Windows, accept drive-letter absolute paths (e.g. C:\... or D:\...).
+  if (filePath.size() >= 2 && filePath[1] == ':') {
+    return std::make_unique<LocalFileSink>(filePath, options);
+  }
+#endif
   return nullptr;
 }
 } // namespace
@@ -142,7 +150,7 @@ LocalFileSink::LocalFileSink(const std::string& name, const Options& options)
     : FileSink{name, options}, writeFile_() {
   const auto dir = fs::path(name_).parent_path();
   if (!fs::exists(dir)) {
-    VELOX_CHECK(velox::common::generateFileDirectory(dir.c_str()));
+    VELOX_CHECK(velox::common::generateFileDirectory(dir.string().c_str()));
   }
   auto fs = filesystems::getFileSystem(name_, nullptr);
   writeFile_ = fs->openFileForWrite(name_);
@@ -155,7 +163,7 @@ LocalFileSink::LocalFileSink(
     : FileSink{name, options}, writeFile_() {
   const auto dir = fs::path(name_).parent_path();
   if (!fs::exists(dir)) {
-    VELOX_CHECK(velox::common::generateFileDirectory(dir.c_str()));
+    VELOX_CHECK(velox::common::generateFileDirectory(dir.string().c_str()));
   }
 }
 

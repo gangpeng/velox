@@ -9,7 +9,11 @@
 // For information see https://libcxx.llvm.org/DesignDocs/TimeZone.html
 
 #include <sys/stat.h>
+#ifdef _WIN32
+#include <cstdlib>
+#else
 #include <unistd.h>
+#endif
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -26,6 +30,16 @@
 #include "velox/external/tzdb/types_private.h"
 #include "velox/external/tzdb/tzdb_list_private.h"
 #include "velox/external/tzdb/tzdb_private.h"
+
+// std::__throw_runtime_error is a libstdc++/libc++ internal. Provide a
+// portable shim for MSVC where this symbol does not exist.
+#ifdef _MSC_VER
+namespace std {
+[[noreturn]] inline void __throw_runtime_error(const char* msg) {
+  throw std::runtime_error(msg);
+}
+} // namespace std
+#endif
 
 // Contains a parser for the IANA time zone data files.
 //
@@ -55,6 +69,15 @@ using namespace std::chrono_literals;
 // This function is weak so it can be overridden in the tests. The
 // declaration is in the test header test/support/test_tzdb.h
 std::string __libcpp_tzdb_directory() {
+#ifdef _WIN32
+  // On Windows, check for VELOX_TZDATA_PATH environment variable first.
+  const char* env_path = std::getenv("VELOX_TZDATA_PATH");
+  if (env_path != nullptr && env_path[0] != '\0') {
+    return std::string(env_path);
+  }
+  // Default: C:\tools\velox-tzdata
+  return "C:\\tools\\velox-tzdata";
+#else
   struct stat sb;
   using namespace std;
 #if !defined(__APPLE__)
@@ -87,6 +110,7 @@ std::string __libcpp_tzdb_directory() {
     throw runtime_error("discover_tz_dir failed to find '/'\n");
   return result.substr(0, i);
 #endif // __APPLE__
+#endif // _WIN32
 }
 
 //===----------------------------------------------------------------------===//
@@ -669,24 +693,24 @@ static void __parse_rule(
   __skip_mandatory_whitespace(__input);
   std::string __name = __parse_string(__input);
 
-  __rule& __rule = __create_entry(__rules, __name);
+  __rule& __r = __create_entry(__rules, __name);
 
   __skip_mandatory_whitespace(__input);
-  __rule.__from = __parse_year(__input);
+  __r.__from = __parse_year(__input);
   __skip_mandatory_whitespace(__input);
-  __rule.__to = __parse_to(__input, __rule.__from);
+  __r.__to = __parse_to(__input, __r.__from);
   __skip_mandatory_whitespace(__input);
   __matches(__input, '-');
   __skip_mandatory_whitespace(__input);
-  __rule.__in = __parse_month(__input);
+  __r.__in = __parse_month(__input);
   __skip_mandatory_whitespace(__input);
-  __rule.__on = __parse_on(__input);
+  __r.__on = __parse_on(__input);
   __skip_mandatory_whitespace(__input);
-  __rule.__at = __parse_at(__input);
+  __r.__at = __parse_at(__input);
   __skip_mandatory_whitespace(__input);
-  __rule.__save = __parse_save(__input);
+  __r.__save = __parse_save(__input);
   __skip_mandatory_whitespace(__input);
-  __rule.__letters = __parse_letters(__input);
+  __r.__letters = __parse_letters(__input);
   __skip_line(__input);
 }
 
@@ -708,12 +732,11 @@ static void __parse_zone(
   } while (std::isdigit(__input.peek()) || __input.peek() == '-');
 
   std::filesystem::path __root = __libcpp_tzdb_directory();
-  if (!std::filesystem::exists(__root/ __p->__name())) {
-    // in case the zonefile does not exists
-    return;
+  if (std::filesystem::exists(__root / __p->__name())) {
+    std::ifstream zone_file{__root / __p->__name()};
+    date::populate_transitions(__p->transitions(), __p->ttinfos(), zone_file);
   }
-  std::ifstream zone_file{__root / __p->__name()};
-  date::populate_transitions(__p->transitions(), __p->ttinfos(), zone_file);
+  // Always add the zone even if no binary TZif file exists (fixed-offset zones like UTC)
 
   __tzdb.zones.emplace_back(time_zone::__create(std::move(__p)));
 }

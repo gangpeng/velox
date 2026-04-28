@@ -25,6 +25,44 @@
 
 namespace facebook::velox::parquet {
 
+#ifdef _MSC_VER
+// On MSVC, std::make_signed_t cannot be instantiated with absl::int128 /
+// __uint128_t. Provide a safe wrapper that maps each make_index output type to
+// the corresponding signed type without calling make_signed_t on __uint128_t.
+namespace detail {
+// Map from make_index<T>::type (unsigned) -> signed equivalent.
+// Primary template: for any IndexType not matched below, default to int64_t
+// (covers __uint128_t which MSVC cannot make_signed).
+template <typename IndexType>
+struct to_signed_index {
+  using type = int64_t;
+};
+template <>
+struct to_signed_index<uint16_t> {
+  using type = int16_t;
+};
+template <>
+struct to_signed_index<uint32_t> {
+  using type = int32_t;
+};
+template <>
+struct to_signed_index<uint64_t> {
+  using type = int64_t;
+};
+
+template <typename T>
+struct safe_make_index_signed {
+  using type =
+      typename to_signed_index<typename dwio::common::make_index<T>::type>::
+          type;
+};
+template <>
+struct safe_make_index_signed<int128_t> {
+  using type = int64_t;
+};
+} // namespace detail
+#endif /* _MSC_VER */
+
 // This class will be used for dictionary Ids or other data that is RLE/BP
 // encoded.
 class RleBpDataDecoder : public facebook::velox::parquet::RleBpDecoder {
@@ -175,8 +213,14 @@ class RleBpDataDecoder : public facebook::velox::parquet::RleBpDecoder {
         (rows[rowIndex + numRows - 1] + 1 - currentRow) * bitWidth_;
 
     using TValues = typename std::remove_reference<decltype(values[0])>::type;
+#ifdef _MSC_VER
+    // absl::int128 cannot be used as a pointer type for unpack on MSVC.
+    // Dictionary indices from parquet bit-packing are at most 64 bits.
+    using TIndex = typename detail::safe_make_index_signed<TValues>::type;
+#else
     using TIndex = typename std::make_signed_t<
         typename dwio::common::make_index<TValues>::type>;
+#endif
     facebook::velox::dwio::common::unpack(
         reinterpret_cast<const uint64_t*>(super::bufferStart_),
         bitOffset_,

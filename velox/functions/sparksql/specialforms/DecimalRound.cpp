@@ -109,7 +109,7 @@ class DecimalRoundFunction : public exec::VectorFunction {
       TResult rescaledValue;
       DecimalUtil::divideWithRoundUp<TResult, TInput, int128_t>(
           rescaledValue, input, divideFactor_.value(), false, 0, 0);
-      rescaledValue *= multiplyFactor_.value();
+      rescaledValue = static_cast<TResult>(static_cast<int128_t>(rescaledValue) * multiplyFactor_.value());
       return rescaledValue;
     }
   }

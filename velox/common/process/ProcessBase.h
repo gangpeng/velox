@@ -16,8 +16,23 @@
 
 #pragma once
 
+#ifdef _WIN32
+#define NOGDI  // Prevents wingdi.h from being included (avoids #define OPAQUE 2 etc.)
+#include <windows.h>
+// Undefine Windows macros that conflict with Velox enum values.
+#ifdef OPAQUE
+#undef OPAQUE
+#endif
+// Use folly's Windows POSIX type definitions to avoid redefinition conflicts.
+#include <folly/portability/SysTypes.h>
+// Use folly's pthread emulation so that pthread_t is consistently defined
+// across all translation units (folly/portability/PThread.h defines it as
+// std::shared_ptr<...> and does "using namespace folly::portability::pthread").
+#include <folly/portability/PThread.h>
+#else
 #include <pthread.h>
 #include <sys/types.h>
+#endif
 #include <cstdint>
 #include <string>
 #include <vector>

@@ -204,6 +204,21 @@ class VectorTestBase {
     return vectorMaker_.flatVector<T>(data, type);
   }
 
+#ifdef _MSC_VER
+  // On MSVC, absl::int128 is a class type and brace-init-lists containing
+  // plain integer literals cannot directly form initializer_list<int128_t>.
+  // Provide overloads that accept int64_t and convert.
+  template <
+      typename T,
+      std::enable_if_t<std::is_same_v<T, int128_t>, int> = 0>
+  FlatVectorPtr<EvalType<T>> makeFlatVector(
+      const std::initializer_list<int64_t>& data,
+      const TypePtr& type) {
+    std::vector<T> vec(data.begin(), data.end());
+    return vectorMaker_.flatVector<T>(vec, type);
+  }
+#endif
+
   template <typename T>
   FlatVectorPtr<EvalType<T>> makeNullableFlatVector(
       const std::vector<std::optional<T>>& data,

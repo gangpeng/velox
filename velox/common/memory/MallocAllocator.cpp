@@ -15,10 +15,12 @@
  */
 
 #include "velox/common/memory/MallocAllocator.h"
+#include <cstdlib>
+#include <cstring>
+
 #include <folly/system/HardwareConcurrency.h>
 #include "velox/common/memory/Memory.h"
-
-#include <sys/mman.h>
+#include "velox/common/memory/SystemMemory.h"
 
 namespace facebook::velox::memory {
 MallocAllocator::MallocAllocator(const Options& options)
@@ -173,7 +175,7 @@ bool MallocAllocator::allocateContiguousImpl(
   numMapped_.fetch_add(numPages);
   numExternalMapped_.fetch_add(numPages);
   const auto maxBytes = AllocationTraits::pageBytes(maxPages);
-  void* data = dispatchAllocateContiguous(maxBytes);
+  void* data = dispatchAllocateContiguous(totalBytes, maxBytes);
   if (FOLLY_UNLIKELY(data == nullptr)) {
     numAllocated_.fetch_sub(numPages);
     numMapped_.fetch_sub(numPages);
@@ -233,32 +235,33 @@ void MallocAllocator::freeContiguousImpl(ContiguousAllocation& allocation) {
   allocation.clear();
 }
 
-void* MallocAllocator::dispatchAllocateContiguous(size_t maxBytes) {
+void* MallocAllocator::dispatchAllocateContiguous(size_t bytes, size_t maxBytes) {
   if (testingHasInjectedFailure(InjectedFailure::kAllocate)) {
     return nullptr;
   }
   if (mallocContiguousEnabled_) {
-    return ::aligned_alloc(AllocationTraits::kPageSize, maxBytes);
+    return systemAlignedAlloc(AllocationTraits::kPageSize, maxBytes);
   }
-  // TODO: add handling of MAP_FAILED.
-  return ::mmap(
-      nullptr,
-      maxBytes,
-      PROT_READ | PROT_WRITE,
-      MAP_PRIVATE | MAP_ANONYMOUS,
-      -1,
-      0);
+  void* data = systemMmap(maxBytes, SystemMmapMode::kReserve);
+  if (data == nullptr) {
+    return nullptr;
+  }
+  if (!systemMmapCommit(data, bytes)) {
+    systemMunmap(data, maxBytes);
+    return nullptr;
+  }
+  return data;
 }
 
 void MallocAllocator::dispatchFreeContiguous(ContiguousAllocation& allocation) {
   if (mallocContiguousEnabled_) {
-    ::free(allocation.data());
+    systemAlignedFree(allocation.data());
   } else {
     useHugePages(allocation, false);
-    if (::munmap(allocation.data(), allocation.maxSize()) < 0) {
+    if (!systemMunmap(allocation.data(), allocation.maxSize())) {
       VELOX_MEM_LOG(ERROR) << "Error for munmap(" << allocation.data() << ", "
                            << succinctBytes(allocation.size()) << "): '"
-                           << folly::errnoStr(errno) << "'";
+                           << systemMemoryError() << "'";
     }
   }
 }
@@ -275,6 +278,19 @@ bool MallocAllocator::growContiguousWithoutRetry(
         succinctBytes(capacity_));
     setAllocatorFailureMessage(errorMsg);
     VELOX_MEM_LOG_EVERY_MS(WARNING, 1000) << errorMsg;
+    return false;
+  }
+  if (!mallocContiguousEnabled_ &&
+      !systemMmapCommit(
+          static_cast<uint8_t*>(allocation.data()) + allocation.size(),
+          AllocationTraits::pageBytes(increment))) {
+    const auto errorMsg = fmt::format(
+        "Failed to commit {} pages for growing contiguous allocation: {}",
+        increment,
+        systemMemoryError());
+    setAllocatorFailureMessage(errorMsg);
+    VELOX_MEM_LOG_EVERY_MS(WARNING, 1000) << errorMsg;
+    decrementUsage(AllocationTraits::pageBytes(increment));
     return false;
   }
   numAllocated_ += increment;
@@ -307,8 +323,7 @@ void* MallocAllocator::allocateBytesWithoutRetry(
         bytes,
         alignment);
   }
-  void* result = (alignment > kMinAlignment) ? ::aligned_alloc(alignment, bytes)
-                                             : ::malloc(bytes);
+  void* result = systemAlignedAlloc(alignment, bytes);
   if (FOLLY_UNLIKELY(result == nullptr)) {
     VELOX_MEM_LOG(ERROR) << "Failed to allocateBytes " << succinctBytes(bytes)
                          << " with " << alignment << " alignment";
@@ -327,7 +342,10 @@ void* MallocAllocator::allocateZeroFilledWithoutRetry(uint64_t bytes) {
     setAllocatorFailureMessage(errorMsg);
     return nullptr;
   }
-  void* result = std::calloc(1, bytes);
+  void* result = systemAlignedAlloc(kMinAlignment, bytes);
+  if (FOLLY_LIKELY(result != nullptr)) {
+    std::memset(result, 0, bytes);
+  }
   if (FOLLY_UNLIKELY(result == nullptr)) {
     VELOX_MEM_LOG(ERROR) << "Failed to allocateZeroFilled "
                          << succinctBytes(bytes);
@@ -336,7 +354,7 @@ void* MallocAllocator::allocateZeroFilledWithoutRetry(uint64_t bytes) {
 }
 
 void MallocAllocator::freeBytes(void* p, uint64_t bytes) noexcept {
-  ::free(p); // NOLINT
+  systemAlignedFree(p); // NOLINT
   decrementUsage(bytes);
 }
 

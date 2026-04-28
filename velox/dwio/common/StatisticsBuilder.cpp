@@ -32,7 +32,7 @@ template <typename T>
 void addWithOverflowCheck(std::optional<T>& to, T value, uint64_t count) {
   if (to.has_value()) {
     T result;
-    auto overflow = __builtin_mul_overflow(value, count, &result);
+    auto overflow = __builtin_mul_overflow(value, static_cast<T>(count), &result);
     if (!overflow) {
       overflow = __builtin_add_overflow(to.value(), result, &to.value());
     }

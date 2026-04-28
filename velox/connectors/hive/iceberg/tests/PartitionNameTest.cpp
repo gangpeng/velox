@@ -246,7 +246,7 @@ TEST_F(PartitionNameTest, specialChars) {
   std::vector<std::pair<std::string, std::string>> inputs = {
       {"abc123", "abc123"},
       {"ABC123", "ABC123"},
-      {"a.b-c_d*e", "a.b-c_d*e"},
+      {"a.b-c_d*e", "a.b-c_d%2Ae"},
       {"space test", "space+test"},
       {"slash/test", "slash%2Ftest"},
       {"question?test", "question%3Ftest"},
@@ -286,7 +286,7 @@ TEST_F(PartitionNameTest, specialChars) {
        "https%3A%2F%2Fgithub.com%2Ffacebookincubator%2Fvelox"},
       {"a+b=c&d=e+f", "a%2Bb%3Dc%26d%3De%2Bf"},
       {"a#b=c/d e", "a%23b%3Dc%2Fd+e"},
-      {"special!@#$%^&*()_+", "special%21%40%23%24%25%5E%26*%28%29_%2B"},
+      {"special!@#$%^&*()_+", "special%21%40%23%24%25%5E%26%2A%28%29_%2B"},
   };
 
   for (const auto& [input, encodedValue] : inputs) {

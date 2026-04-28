@@ -165,7 +165,7 @@ TEST_F(FilterProjectReplayerTest, filterProject) {
     traceBuilder.maxDrivers(4)
         .config(core::QueryConfig::kQueryTraceEnabled, true)
         .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-        .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+        .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
         .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
         .config(core::QueryConfig::kQueryTraceNodeId, projectNodeId_);
     auto traceResult = traceBuilder.splits(tracePlanWithSplits.splits)
@@ -200,7 +200,7 @@ TEST_F(FilterProjectReplayerTest, filterOnly) {
   traceBuilder.maxDrivers(4)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, filterNodeId_);
   auto traceResult =
@@ -234,7 +234,7 @@ TEST_F(FilterProjectReplayerTest, projectOnly) {
   traceBuilder.maxDrivers(4)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, projectNodeId_);
   auto traceResult =
@@ -318,7 +318,7 @@ TEST_F(FilterProjectReplayerTest, dryRun) {
   traceBuilder.maxDrivers(4)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, filterNodeId_)
       .config(core::QueryConfig::kQueryTraceDryRun, true);

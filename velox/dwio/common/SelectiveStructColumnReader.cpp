@@ -425,7 +425,6 @@ void SelectiveStructColumnReaderBase::read(
   }
 
   const auto& childSpecs = scanSpec_->children();
-  VELOX_CHECK(!childSpecs.empty());
   for (size_t i = 0; i < childSpecs.size(); ++i) {
     const auto& childSpec = childSpecs[i];
 
@@ -538,7 +537,6 @@ SelectiveStructColumnReaderBase::makeColumnLoader(vector_size_t index) {
 void SelectiveStructColumnReaderBase::getValues(
     const RowSet& rows,
     VectorPtr* result) {
-  VELOX_CHECK(!scanSpec_->children().empty());
   VELOX_CHECK_NOT_NULL(
       *result, "SelectiveStructColumnReaderBase expects a non-null result");
   VELOX_CHECK(
@@ -634,6 +632,19 @@ namespace detail {
 
 xsimd::batch<int32_t> bitsToInt32s[256];
 
+#ifdef _MSC_VER
+// MSVC does not support __attribute__((constructor)); use a static initializer.
+static const int initBitsToInt32sDone = []() {
+  for (int i = 0; i < 256; ++i) {
+    int32_t data[8];
+    for (int j = 0; j < 8; ++j) {
+      data[j] = bits::isBitSet(&i, j);
+    }
+    bitsToInt32s[i] = xsimd::load_unaligned(data);
+  }
+  return 0;
+}();
+#else
 __attribute__((constructor)) void initBitsToInt32s() {
   for (int i = 0; i < 256; ++i) {
     int32_t data[8];
@@ -643,6 +654,7 @@ __attribute__((constructor)) void initBitsToInt32s() {
     bitsToInt32s[i] = xsimd::load_unaligned(data);
   }
 }
+#endif
 
 #endif
 

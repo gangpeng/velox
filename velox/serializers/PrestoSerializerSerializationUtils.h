@@ -80,7 +80,7 @@ FOLLY_ALWAYS_INLINE int128_t toJavaDecimalValue(int128_t value) {
   // representation. Only negative values differ in this representation.
   if (value < 0) {
     value *= -1;
-    value |= DecimalUtil::kInt128Mask;
+    value |= static_cast<int128_t>(DecimalUtil::kInt128Mask);
   }
   return value;
 }

@@ -34,6 +34,8 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <re2/re2.h>
 
+#include <algorithm>
+
 using facebook::velox::common::testutil::TestValue;
 
 namespace facebook::velox::connector::hive {
@@ -143,7 +145,12 @@ std::string makePartitionDirectory(
     const std::string& tableDirectory,
     const std::optional<std::string>& partitionSubdirectory) {
   if (partitionSubdirectory.has_value()) {
-    return fs::path(tableDirectory) / partitionSubdirectory.value();
+    auto path = (fs::path(tableDirectory) / partitionSubdirectory.value())
+                    .generic_string();
+    // Keep partition paths in generic form so '/' remains the partition
+    // separator in downstream split extraction and commit messages on Windows.
+    std::replace(path.begin(), path.end(), '\\', '/');
+    return path;
   }
   return tableDirectory;
 }
@@ -1369,6 +1376,7 @@ folly::dynamic HiveInsertTableHandle::serialize() const {
     params[key] = value;
   }
   obj["serdeParameters"] = params;
+
   obj["ensureFiles"] = ensureFiles_;
   obj["fileNameGenerator"] = fileNameGenerator_->serialize();
   return obj;

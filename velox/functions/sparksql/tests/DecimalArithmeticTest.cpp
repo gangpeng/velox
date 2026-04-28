@@ -879,16 +879,16 @@ TEST_F(DecimalArithmeticTest, unaryMinus) {
            -1112,
            9999,
            0,
-           -DecimalUtil::kShortDecimalMin,
-           -DecimalUtil::kShortDecimalMax},
+           static_cast<int64_t>(-DecimalUtil::kShortDecimalMin),
+           static_cast<int64_t>(-DecimalUtil::kShortDecimalMax)},
           DECIMAL(18, 9)),
       {makeFlatVector<int64_t>(
           {-1111,
            1112,
            -9999,
            0,
-           DecimalUtil::kShortDecimalMin,
-           DecimalUtil::kShortDecimalMax},
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMax)},
           DECIMAL(18, 9))});
 
   testArithmeticFunction(
@@ -938,10 +938,12 @@ TEST_F(DecimalArithmeticTest, ceil) {
   testArithmeticFunction(
       "ceil",
       {makeFlatVector<int64_t>(
-          {DecimalUtil::kShortDecimalMax, DecimalUtil::kShortDecimalMin},
+          {static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
           DECIMAL(18, 0))},
       {makeFlatVector<int64_t>(
-          {DecimalUtil::kShortDecimalMax, DecimalUtil::kShortDecimalMin},
+          {static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
           DECIMAL(18, 0))});
 
   // long DECIMAL -> long DECIMAL.

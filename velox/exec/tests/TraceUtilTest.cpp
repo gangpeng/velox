@@ -78,7 +78,10 @@ TEST_F(TraceUtilTest, traceDir) {
   const auto actualDirs = fs->list(parentDir);
   ASSERT_EQ(actualDirs.size(), numThreads);
   ASSERT_EQ(actualDirs.size(), expectedDirs.size());
-  for (const auto& dir : actualDirs) {
+  for (auto dir : actualDirs) {
+#ifdef _WIN32
+    std::replace(dir.begin(), dir.end(), '\\', '/');
+#endif
     ASSERT_EQ(expectedDirs.count(dir), 1);
   }
 }

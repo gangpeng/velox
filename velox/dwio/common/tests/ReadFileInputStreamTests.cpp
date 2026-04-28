@@ -40,7 +40,12 @@ TEST_F(ReadFileInputStreamTest, LocalReadFile) {
   const auto& filename = tempFile->getPath();
   remove(filename.c_str());
   {
-    LocalWriteFile writeFile(filename);
+    // Pass shouldThrowOnFileAlreadyExists=false because on Windows the temp
+    // file may still exist (open file descriptor prevents deletion).
+    LocalWriteFile writeFile(
+        filename,
+        /*shouldCreateParentDirectories=*/false,
+        /*shouldThrowOnFileAlreadyExists=*/false);
     for (int i = 0; i < 1027; ++i)
       writeFile.append("abc");
     ASSERT_EQ(writeFile.size(), static_cast<uint64_t>(3081));

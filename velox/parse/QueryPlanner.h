@@ -18,7 +18,7 @@
 #include "velox/core/PlanNode.h"
 #include "velox/parse/PlanNodeIdGenerator.h"
 
-#include <duckdb.hpp> // @manual
+#include "velox/duckdb/conversion/DuckDBIncludes.h"
 
 namespace facebook::velox::core {
 

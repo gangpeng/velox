@@ -24,6 +24,7 @@ add_executable(
   FsTest.cpp
   IndexedPriorityQueueTest.cpp
   LazyCPUThreadPoolExecutorTest.cpp
+  PortabilityTest.cpp
   RangeTest.cpp
   RuntimeMetricsTest.cpp
   ScopedLockTest.cpp
@@ -72,7 +73,7 @@ target_link_libraries(
   glog::glog
   GTest::gtest
   GTest::gtest_main
-  pthread
+  $<$<NOT:$<BOOL:${MSVC}>>:pthread>
 )
 
 add_executable(velox_memcpy_meter Memcpy.cpp)

@@ -17,6 +17,35 @@
 #include "velox/type/DecimalUtil.h"
 #include "velox/type/HugeInt.h"
 
+#ifdef _MSC_VER
+#include <limits>
+#include <folly/Expected.h>
+#include <folly/Conv.h>
+namespace {
+// folly::tryTo<int128_t> is not supported on MSVC because int128_t is
+// absl::int128 which folly's Conv.h does not know about. This helper parses
+// a string_view of decimal digits into an int128_t, returning an error if the
+// value would overflow.
+folly::Expected<facebook::velox::int128_t, folly::ConversionCode>
+tryToInt128(std::string_view sv) {
+  facebook::velox::int128_t result{0};
+  const auto max = std::numeric_limits<facebook::velox::int128_t>::max();
+  for (char c : sv) {
+    if (c < '0' || c > '9') {
+      return folly::makeUnexpected(folly::ConversionCode::NON_DIGIT_CHAR);
+    }
+    const facebook::velox::int128_t digit = c - '0';
+    if (result > (max - digit) / 10) {
+      return folly::makeUnexpected(
+          folly::ConversionCode::ARITH_POSITIVE_OVERFLOW);
+    }
+    result = result * 10 + digit;
+  }
+  return result;
+}
+} // namespace
+#endif
+
 namespace facebook::velox {
 namespace {
 std::string formatDecimal(uint8_t scale, int128_t unscaledValue) {
@@ -76,12 +105,12 @@ int32_t DecimalUtil::getByteArrayLength(int128_t value) {
 
 int32_t DecimalUtil::toByteArray(int128_t value, char* out) {
   int32_t length = getByteArrayLength(value);
-  auto lowBig = folly::Endian::big<int64_t>(value);
+  auto lowBig = folly::Endian::big<int64_t>(static_cast<int64_t>(value));
   uint8_t* lowAddr = reinterpret_cast<uint8_t*>(&lowBig);
   if (length <= sizeof(int64_t)) {
     memcpy(out, lowAddr + sizeof(int64_t) - length, length);
   } else {
-    auto highBig = folly::Endian::big<int64_t>(value >> 64);
+    auto highBig = folly::Endian::big<int64_t>(static_cast<int64_t>(value >> 64));
     uint8_t* highAddr = reinterpret_cast<uint8_t*>(&highBig);
     memcpy(out, highAddr + sizeof(int128_t) - length, length - sizeof(int64_t));
     memcpy(out + length - sizeof(int64_t), lowAddr, sizeof(int64_t));
@@ -119,9 +148,22 @@ void DecimalUtil::computeAverage(
     quotMul *= overflow;
     remSum = DecimalUtil::divideWithRoundUp<__int128_t, __int128_t, int64_t>(
         quotSum, sum, count, true, 0, 0);
+#ifdef _MSC_VER
+    // On MSVC absl::uint128 and absl::int128 have no implicit conversion.
+    auto remMulSigned = absl::MakeInt128(
+        static_cast<int64_t>(absl::Uint128High64(remMul)),
+        absl::Uint128Low64(remMul));
+    auto quotMulSigned = absl::MakeInt128(
+        static_cast<int64_t>(absl::Uint128High64(quotMul)),
+        absl::Uint128Low64(quotMul));
+    DecimalUtil::divideWithRoundUp<__int128_t, __int128_t, int64_t>(
+        remTotal, remMulSigned + remSum, count, false, 0, 0);
+    avg = quotMulSigned + quotSum + remTotal;
+#else
     DecimalUtil::divideWithRoundUp<__int128_t, __int128_t, int64_t>(
         remTotal, remMul + remSum, count, false, 0, 0);
     avg = quotMul + quotSum + remTotal;
+#endif
   }
 }
 
@@ -238,9 +280,15 @@ parseDecimalComponents(const char* s, size_t size, DecimalComponents& out) {
 Status parseHugeInt(const DecimalComponents& decimalComponents, int128_t& out) {
   // Parse the whole digits.
   if (decimalComponents.wholeDigits.size() > 0) {
+#ifdef _MSC_VER
+    const auto tryValue = tryToInt128(std::string_view(
+        decimalComponents.wholeDigits.data(),
+        decimalComponents.wholeDigits.size()));
+#else
     const auto tryValue = folly::tryTo<int128_t>(std::string_view(
         decimalComponents.wholeDigits.data(),
         decimalComponents.wholeDigits.size()));
+#endif
     if (tryValue.hasError()) {
       return Status::UserError("Value too large.");
     }
@@ -255,8 +303,13 @@ Status parseHugeInt(const DecimalComponents& decimalComponents, int128_t& out) {
     if (overflow) {
       return Status::UserError("Value too large.");
     }
+#ifdef _MSC_VER
+    const auto tryValue = tryToInt128(
+        std::string_view(decimalComponents.fractionalDigits.data(), length));
+#else
     const auto tryValue = folly::tryTo<int128_t>(
         std::string_view(decimalComponents.fractionalDigits.data(), length));
+#endif
     if (tryValue.hasError()) {
       return Status::UserError("Value too large.");
     }
@@ -332,7 +385,7 @@ Status DecimalUtil::parseStringToDecimalComponents(
   VELOX_RETURN_NOT_OK(parseHugeInt(decimalComponents, out));
 
   if (roundUp) {
-    bool overflow = __builtin_add_overflow(out, 1, &out);
+    bool overflow = __builtin_add_overflow(out, int128_t(1), &out);
     if (UNLIKELY(overflow)) {
       return Status::UserError("Value too large.");
     }

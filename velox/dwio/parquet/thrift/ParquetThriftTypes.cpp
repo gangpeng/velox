@@ -25,7 +25,17 @@
 #include <algorithm>
 #include <ostream>
 
+// On Windows, guard against sockaddr_un redefinition between Folly and afunix.h.
+#ifdef _WIN32
+#pragma push_macro("_AFUNIX_")
+#ifndef _AFUNIX_
+#define _AFUNIX_
+#endif
+#endif
 #include <thrift/TToString.h>
+#ifdef _WIN32
+#pragma pop_macro("_AFUNIX_")
+#endif
 
 namespace facebook::velox::parquet::thrift {
 

@@ -25,6 +25,9 @@
 namespace facebook::velox::fuzzer::test {
 
 TEST(TimestampWithTimeZoneInputGeneratorTest, generate) {
+#ifdef _WIN32
+  GTEST_SKIP() << "TimestampWithTimeZone tests are not supported on Windows.";
+#endif
   TimestampWithTimeZoneInputGenerator generator(123456, 0.1);
 
   size_t numTrials = 100;

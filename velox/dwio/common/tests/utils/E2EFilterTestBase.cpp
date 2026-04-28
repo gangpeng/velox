@@ -996,7 +996,7 @@ void E2EFilterTestBase::testMetadataFilter() {
         parseExpr("a == 8"), batches[0]->type(), leafPool_.get());
 
     auto typedExpr = std::make_shared<core::CallTypedExpr>(
-        velox::BOOLEAN(),
+        ScalarType<TypeKind::BOOLEAN>::create(),
         std::vector{
             std::move(typedExpr1),
             std::move(typedExpr2),
@@ -1021,7 +1021,7 @@ void E2EFilterTestBase::testMetadataFilter() {
         parseExpr("b.c != 8"), batches[0]->type(), leafPool_.get());
 
     auto typedExpr = std::make_shared<core::CallTypedExpr>(
-        velox::BOOLEAN(),
+        ScalarType<TypeKind::BOOLEAN>::create(),
         std::vector{
             std::move(typedExpr1),
             std::move(typedExpr2),

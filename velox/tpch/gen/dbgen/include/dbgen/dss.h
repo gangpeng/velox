@@ -50,10 +50,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// some defines to avoid r warnings
+// some defines to avoid r warnings; skip on Windows because redefining
+// exit/printf/fprintf breaks MSVC SDK headers that declare these functions.
+#ifndef _WIN32
 #define exit(status)
 #define printf(...)
 #define fprintf(...)
+#endif
 
 #define NONE -1
 #define PART 0

@@ -63,9 +63,15 @@ int main(int argc, char** argv) {
       std::max<int64_t>(FLAGS_bytes / FLAGS_threads, kAlignment), kAlignment);
   int64_t bytes = chunk * FLAGS_threads;
   auto executor = std::make_unique<folly::CPUThreadPoolExecutor>(FLAGS_threads);
+#ifdef _MSC_VER
+  void* other = _aligned_malloc(bytes, kAlignment);
+  void* source = _aligned_malloc(bytes, kAlignment);
+  void* destination = _aligned_malloc(bytes, kAlignment);
+#else
   void* other = aligned_alloc(kAlignment, bytes);
   void* source = aligned_alloc(kAlignment, bytes);
   void* destination = aligned_alloc(kAlignment, bytes);
+#endif
   // Write all memory once outside of timed section to make them resident.
   memset(other, 1, bytes);
   memset(source, 1, bytes);

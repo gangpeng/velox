@@ -23,7 +23,7 @@ namespace facebook::velox::test {
 std::string getDataFilePath(
     const std::string& baseDir,
     const std::string& filePath) {
-  std::string current_path = fs::current_path().c_str();
+  std::string current_path = fs::current_path().string();
   if (boost::algorithm::ends_with(current_path, "fbcode")) {
     return current_path + "/" + baseDir + "/" + filePath;
   }

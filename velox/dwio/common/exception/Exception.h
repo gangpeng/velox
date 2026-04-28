@@ -100,6 +100,26 @@ class LoggedException : public velox::VeloxException {
 
 } // namespace common::exception
 
+// On MSVC, GNU statement expressions ({ ... }) are not supported.
+// Use do { } while(0) for DWIO_WARN_IF and a plain if-throw for
+// DWIO_ENFORCE_CUSTOM instead.
+#ifdef _MSC_VER
+#define DWIO_WARN_IF(e, ...)                                                \
+  do {                                                                      \
+    if (e) {                                                                \
+      auto logger =                                                         \
+          ::facebook::velox::dwio::common::exception::getExceptionLogger(); \
+      if (logger) {                                                         \
+        logger->logWarning(                                                 \
+            __FILE__,                                                       \
+            __LINE__,                                                       \
+            __FUNCTION__,                                                   \
+            #e,                                                             \
+            ::folly::to<std::string>(__VA_ARGS__).c_str());                 \
+      }                                                                     \
+    }                                                                       \
+  } while (0)
+#else
 #define DWIO_WARN_IF(e, ...)                                                \
   ({                                                                        \
     auto const& _tmp = (e);                                                 \
@@ -116,6 +136,7 @@ class LoggedException : public velox::VeloxException {
       }                                                                     \
     }                                                                       \
   })
+#endif
 
 #define DWIO_WARN(...) DWIO_WARN_IF(true, ##__VA_ARGS__)
 
@@ -145,6 +166,24 @@ class LoggedException : public velox::VeloxException {
  * The ENFORCE macro stores the file, name, and function into the
  * FBException thrown.
  */
+// On MSVC, GNU statement expressions ({ ... }) are not supported.
+// Use a plain if-throw pattern for DWIO_ENFORCE_CUSTOM.
+#ifdef _MSC_VER
+#define DWIO_ENFORCE_CUSTOM(                                    \
+    exception, expression, errorSource, errorCode, ...)         \
+  do {                                                          \
+    if (!(expression)) {                                        \
+      throw exception(                                          \
+          __FILE__,                                             \
+          __LINE__,                                             \
+          __FUNCTION__,                                         \
+          #expression,                                          \
+          ::folly::to<std::string>(__VA_ARGS__),                \
+          errorSource,                                          \
+          errorCode);                                           \
+    }                                                           \
+  } while (0)
+#else
 #define DWIO_ENFORCE_CUSTOM(                            \
     exception, expression, errorSource, errorCode, ...) \
   ({                                                    \
@@ -159,6 +198,7 @@ class LoggedException : public velox::VeloxException {
                errorSource,                             \
                errorCode);                              \
   })
+#endif
 
 /*
 Unconditionally throws an exception derived from VeloxException

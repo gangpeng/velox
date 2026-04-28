@@ -385,6 +385,9 @@ TEST_F(TimeWithTimezoneCastTest, toTime) {
 }
 
 TEST_F(TimeWithTimezoneCastTest, fromTime) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   {
     // Test casting TIME to TIME WITH TIME ZONE with various times
     // TIME values are in local time, and get converted to UTC for storage
@@ -675,6 +678,9 @@ TEST_F(TimeWithTimezoneCastTest, fromTime) {
 }
 
 TEST_F(TimeWithTimezoneCastTest, fromTimeVerifyUtcStorage) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   // This test verifies that when casting TIME to TIME WITH TIME ZONE,
   // the time component is stored as UTC milliseconds, not local milliseconds.
   // TIME WITH TIME ZONE stores:

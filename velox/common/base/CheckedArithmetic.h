@@ -20,6 +20,7 @@
 #include <string>
 #include "folly/Likely.h"
 #include "velox/common/base/Exceptions.h"
+#include "velox/common/base/Portability.h"
 
 namespace facebook::velox {
 

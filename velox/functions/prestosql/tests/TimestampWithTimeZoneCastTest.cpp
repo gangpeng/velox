@@ -94,6 +94,9 @@ TEST_F(TimestampWithTimeZoneCastTest, fromTimestamp) {
 }
 
 TEST_F(TimestampWithTimeZoneCastTest, fromVarchar) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto stringVector = makeNullableFlatVector<StringView>(
       {std::nullopt,
        "2012-10-31 01:00:47 America/Denver",
@@ -135,6 +138,9 @@ TEST_F(TimestampWithTimeZoneCastTest, fromVarchar) {
 }
 
 TEST_F(TimestampWithTimeZoneCastTest, toVarchar) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   // 1970-01-01 06:11:37.123 UTC in 4 different time zones.
   const int64_t utcMillis =
       6 * kMillisInHour + 11 * kMillisInMinute + 37 * kMillisInSecond + 123;
@@ -164,6 +170,9 @@ TEST_F(TimestampWithTimeZoneCastTest, toVarchar) {
 }
 
 TEST_F(TimestampWithTimeZoneCastTest, fromVarcharWithoutTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   setQueryTimeZone("America/Denver");
 
   const auto stringVector =
@@ -184,6 +193,9 @@ TEST_F(TimestampWithTimeZoneCastTest, fromVarcharWithoutTimezone) {
 }
 
 TEST_F(TimestampWithTimeZoneCastTest, fromVarcharInvalidInput) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   const auto invalidStringVector1 = makeNullableFlatVector<StringView>(
       {"2012-10-31 01:00:47fooAmerica/Los_Angeles"});
 
@@ -240,6 +252,9 @@ TEST_F(TimestampWithTimeZoneCastTest, fromVarcharInvalidInput) {
 }
 
 TEST_F(TimestampWithTimeZoneCastTest, toTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   auto timestamps =
       std::vector<int64_t>{1996 * kMillisInSecond, 0, 19920 * kMillisInSecond};
   auto timezones = std::vector<TimeZoneKey>{0, 0, 1825 /*America/Los_Angeles*/};
@@ -278,6 +293,9 @@ TEST_F(TimestampWithTimeZoneCastTest, toTimestamp) {
 }
 
 TEST_F(TimestampWithTimeZoneCastTest, toDate) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   auto input = makeFlatVector<int64_t>(
       {
           // 6AM UTC is 1AM EST (same day), 10PM PST (previous day), 2PM CST
@@ -307,6 +325,9 @@ TEST_F(TimestampWithTimeZoneCastTest, toDate) {
 }
 
 TEST_F(TimestampWithTimeZoneCastTest, fromDate) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   auto input = makeFlatVector<int32_t>({-1, 0, 1}, DATE());
 
   setQueryTimeZone("America/New_York");
@@ -342,6 +363,9 @@ TEST_F(TimestampWithTimeZoneCastTest, fromDate) {
 }
 
 TEST_F(TimestampWithTimeZoneCastTest, fromTime) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   {
     // Test casting TIME to TIMESTAMP WITH TIME ZONE with default session start
     // time (epoch). TIME values represent time since midnight (in milliseconds)
@@ -635,6 +659,9 @@ TEST_F(TimestampWithTimeZoneCastTest, fromTime) {
 }
 
 TEST_F(TimestampWithTimeZoneCastTest, toTime) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   // Test casting TIMESTAMP WITH TIME ZONE to TIME
   // The TIME value should represent the local time in the given timezone
   // This matches Presto's behavior (see TestTimestampWithTimeZone.java:34-59)

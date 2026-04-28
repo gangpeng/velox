@@ -130,7 +130,13 @@ std::string StackTrace::log(
   msg += "Host: " + getHostName();
   msg += "\nProcessID: " + pid;
   msg += "\nThreadID: " +
+#ifdef _WIN32
+      // On Windows, folly::portability::pthread::pthread_t is a shared_ptr;
+      // use GetCurrentThreadId() for a numeric thread ID instead.
+      folly::to<std::string>(static_cast<uintptr_t>(GetCurrentThreadId()));
+#else
       folly::to<std::string>(reinterpret_cast<uintptr_t>(getThreadId()));
+#endif
   msg += "\nName: " + getAppName();
   msg += "\nType: ";
   if (errorType) {

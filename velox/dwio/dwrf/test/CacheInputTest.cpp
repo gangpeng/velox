@@ -205,7 +205,7 @@ class CacheTest : public ::testing::Test {
     fileIds_.push_back(groupId);
     // Creates an extremely large read file for test.
     auto stream = std::make_shared<TestReadFile>(
-        fileId.id(), 1UL << 63, std::make_shared<facebook::velox::IoStats>());
+        fileId.id(), 1ULL << 63, std::make_shared<facebook::velox::IoStats>());
     pathToInput_[fileId.id()] = stream;
     return stream;
   }

@@ -228,6 +228,9 @@ TEST_F(GreatestLeastTest, leastTimeStamp) {
 }
 
 TEST_F(GreatestLeastTest, greatestTimestampWithTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   auto greatest = [&](const std::string& a,
                       const std::string& b,
                       const std::string& c) {
@@ -470,18 +473,18 @@ TEST_F(GreatestLeastTest, shortDecimal) {
   static const auto kMax = DecimalUtil::kLongDecimalMax - 1;
 
   const auto a = makeNullableFlatVector<int64_t>(
-      {10000, -10000, 20000, kMax, kMin, std::nullopt}, type);
+      {10000, -10000, 20000, static_cast<int64_t>(kMax), static_cast<int64_t>(kMin), std::nullopt}, type);
   const auto b = makeNullableFlatVector<int64_t>(
-      {-10000, 10000, -20000, kMin, kMax, 1}, type);
+      {-10000, 10000, -20000, static_cast<int64_t>(kMin), static_cast<int64_t>(kMax), 1}, type);
   runDecimalTest("least(c0)", {a}, a);
   runDecimalTest("greatest(c0)", {a}, a);
 
   auto expected = makeNullableFlatVector<int64_t>(
-      {-10000, -10000, -20000, kMin, kMin, std::nullopt}, type);
+      {-10000, -10000, -20000, static_cast<int64_t>(kMin), static_cast<int64_t>(kMin), std::nullopt}, type);
   runDecimalTest("least(c0, c1)", {a, b}, expected);
 
   expected = makeNullableFlatVector<int64_t>(
-      {10000, 10000, 20000, kMax, kMax, std::nullopt}, type);
+      {10000, 10000, 20000, static_cast<int64_t>(kMax), static_cast<int64_t>(kMax), std::nullopt}, type);
   runDecimalTest("greatest(c0, c1)", {a, b}, expected);
 }
 

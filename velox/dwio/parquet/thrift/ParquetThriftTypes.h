@@ -22,11 +22,26 @@
  */
 #pragma once
 
+// On Windows, Folly's NetOps.h defines struct sockaddr_un for compatibility
+// with older SDKs. Newer Windows SDKs (>=10.0.17063) also define it in
+// afunix.h. Prevent the duplicate definition by guarding the afunix include.
+#ifdef _WIN32
+#ifndef _AFUNIX_
+#define _AFUNIX_
+#define _VELOX_AFUNIX_GUARD
+#endif
+#endif
+
 #include <thrift/TApplicationException.h>
 #include <thrift/TBase.h>
 #include <thrift/Thrift.h>
 #include <thrift/protocol/TProtocol.h>
 #include <thrift/transport/TTransport.h>
+
+#ifdef _VELOX_AFUNIX_GUARD
+#undef _AFUNIX_
+#undef _VELOX_AFUNIX_GUARD
+#endif
 
 #include <fmt/format.h>
 #include <functional>
@@ -214,6 +229,9 @@ struct FieldRepetitionType {
     /**
      * The field is optional (can be null) and each record has 0 or 1 values.
      */
+#ifdef OPTIONAL
+#undef OPTIONAL
+#endif
     OPTIONAL = 1,
     /**
      * The field is repeated and can contain 0 or more values

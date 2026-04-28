@@ -73,7 +73,7 @@ struct Accumulator {
         sums[key] += value;
       } else {
         S checkedSum;
-        auto overflow = __builtin_add_overflow(sums[key], value, &checkedSum);
+        auto overflow = __builtin_add_overflow(S(sums[key]), S(value), &checkedSum);
 
         if (UNLIKELY(overflow)) {
           auto errorValue = (int128_t(sums[key]) + int128_t(value));
@@ -222,7 +222,7 @@ struct ComplexTypeAccumulator {
           } else {
             V checkedSum;
             auto overflow =
-                __builtin_add_overflow(sums[entry], value, &checkedSum);
+                __builtin_add_overflow(V(sums[entry]), V(value), &checkedSum);
 
             if (UNLIKELY(overflow)) {
               auto errorValue = (int128_t(sums[entry]) + int128_t(value));

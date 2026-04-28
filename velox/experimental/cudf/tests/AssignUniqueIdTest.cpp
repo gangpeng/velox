@@ -175,7 +175,7 @@ TEST_F(AssignUniqueIdTest, maxRowIdLimit) {
   // Increase the counter to kMaxRowId.
   std::dynamic_pointer_cast<const core::AssignUniqueIdNode>(plan)
       ->uniqueIdCounter()
-      ->fetch_add(1L << 40);
+      ->fetch_add(1LL << 40);
 
   VELOX_ASSERT_THROW(
       AssertQueryBuilder(plan).copyResults(pool()),
@@ -186,7 +186,7 @@ TEST_F(AssignUniqueIdTest, taskUniqueIdLimit) {
   auto input = {makeRowVector({makeFlatVector<int32_t>({1, 2, 3})})};
 
   auto plan =
-      PlanBuilder().values(input).assignUniqueId("unique", 1L << 24).planNode();
+      PlanBuilder().values(input).assignUniqueId("unique", 1LL << 24).planNode();
 
   VELOX_ASSERT_THROW(
       AssertQueryBuilder(plan).copyResults(pool()),

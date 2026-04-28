@@ -799,15 +799,15 @@ TEST_F(ArrowBridgeArrayExportTest, arrayCrossValidate) {
 }
 
 TEST_F(ArrowBridgeArrayExportTest, arrayDictionary) {
-  auto vec = ({
+  auto vec = [&]() {
     auto indices = makeBuffer<vector_size_t>({1, 2, 0});
     auto wrapped = vectorMaker_.flatVector<int64_t>({1, 2, 3});
     auto inner = BaseVector::wrapInDictionary(nullptr, indices, 3, wrapped);
     auto offsets = makeBuffer<vector_size_t>({2, 0});
     auto sizes = makeBuffer<vector_size_t>({1, 1});
-    std::make_shared<ArrayVector>(
+    return std::make_shared<ArrayVector>(
         pool_.get(), ARRAY(inner->type()), nullptr, 2, offsets, sizes, inner);
-  });
+  }();
 
   ArrowSchema schema;
   ArrowArray data;
@@ -871,18 +871,18 @@ TEST_F(ArrowBridgeArrayExportTest, arrayReorder) {
 
 TEST_F(ArrowBridgeArrayExportTest, arrayNested) {
   auto elements = vectorMaker_.flatVector<int64_t>({1, 2, 3, 4, 5});
-  auto vec = ({
-    auto inner = ({
+  auto vec = [&]() {
+    auto inner = [&]() {
       auto offsets = makeBuffer<vector_size_t>({0, 4, 2});
       auto sizes = makeBuffer<vector_size_t>({1, 1, 1});
-      std::make_shared<ArrayVector>(
+      return std::make_shared<ArrayVector>(
           pool_.get(), ARRAY(BIGINT()), nullptr, 3, offsets, sizes, elements);
-    });
+    }();
     auto offsets = makeBuffer<vector_size_t>({2, 0});
     auto sizes = makeBuffer<vector_size_t>({1, 1});
-    std::make_shared<ArrayVector>(
+    return std::make_shared<ArrayVector>(
         pool_.get(), ARRAY(inner->type()), nullptr, 2, offsets, sizes, inner);
-  });
+  }();
   auto array = toArrow(vec, options_, pool_.get());
   ASSERT_OK(array->ValidateFull());
   ASSERT_EQ(*array->type(), *arrow::list(arrow::list(arrow::int64())));
@@ -917,24 +917,24 @@ TEST_F(ArrowBridgeArrayExportTest, mapSimple) {
 }
 
 TEST_F(ArrowBridgeArrayExportTest, mapNested) {
-  auto vec = ({
+  auto vec = [&]() {
     auto ident = [](vector_size_t i) { return i; };
-    auto inner = ({
+    auto inner = [&]() {
       auto keys = vectorMaker_.flatVector<int32_t>(5, ident);
       auto values = keys;
       auto offsets = makeBuffer<vector_size_t>({0, 4, 2});
       auto sizes = makeBuffer<vector_size_t>({1, 1, 1});
       auto type = MAP(INTEGER(), INTEGER());
-      std::make_shared<MapVector>(
+      return std::make_shared<MapVector>(
           pool_.get(), type, nullptr, 3, offsets, sizes, keys, values);
-    });
+    }();
     auto offsets = makeBuffer<vector_size_t>({2, 0});
     auto sizes = makeBuffer<vector_size_t>({1, 1});
     auto keys = vectorMaker_.flatVector<int32_t>(3, ident);
     auto type = MAP(INTEGER(), MAP(INTEGER(), INTEGER()));
-    std::make_shared<MapVector>(
+    return std::make_shared<MapVector>(
         pool_.get(), type, nullptr, 2, offsets, sizes, keys, inner);
-  });
+  }();
   auto array = toArrow(vec, options_, pool_.get());
   ASSERT_OK(array->ValidateFull());
   EXPECT_EQ(array->null_count(), 0);
@@ -1032,15 +1032,15 @@ TEST_F(ArrowBridgeArrayExportTest, dictionarySimple) {
 }
 
 TEST_F(ArrowBridgeArrayExportTest, dictionaryNested) {
-  auto vec = ({
+  auto vec = [&]() {
     auto indices = makeBuffer<vector_size_t>({1, 2, 0});
     auto wrapped = vectorMaker_.flatVector<int64_t>({1, 2, 3});
     auto inner = BaseVector::wrapInDictionary(nullptr, indices, 3, wrapped);
     auto offsets = makeBuffer<vector_size_t>({2, 0});
     auto sizes = makeBuffer<vector_size_t>({1, 1});
-    std::make_shared<ArrayVector>(
+    return std::make_shared<ArrayVector>(
         pool_.get(), ARRAY(inner->type()), nullptr, 2, offsets, sizes, inner);
-  });
+  }();
   auto array = toArrow(vec, options_, pool_.get());
   ASSERT_OK(array->ValidateFull());
   ASSERT_EQ(

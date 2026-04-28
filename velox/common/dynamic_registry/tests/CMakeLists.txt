@@ -16,6 +16,12 @@
 # `DynamicFunction.cpp` as a small .so library, and use the
 # VELOX_TEST_DYNAMIC_LIBRARY_PATH macro to locate the .so binary.
 
+# Dynamic library loading tests depend on dlopen/dlsym and are not supported
+# on Windows.
+if(WIN32)
+  return()
+endif()
+
 add_library(velox_function_dynamic SHARED DynamicFunction.cpp)
 add_library(velox_overwrite_int_function_dynamic SHARED DynamicIntFunctionOverwrite.cpp)
 add_library(velox_overwrite_varchar_function_dynamic SHARED DynamicVarcharFunctionOverwrite.cpp)

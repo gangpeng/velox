@@ -145,8 +145,10 @@ class NoisyHelperFunctionFactory {
       VELOX_FAIL("Noisy function does not support this data type.");
     } else {
       // Handle not a number.
-      if (std::isnan(decodedValue.valueAt<T>(i))) {
-        return;
+      if constexpr (std::is_floating_point_v<T>) {
+        if (std::isnan(decodedValue.valueAt<T>(i))) {
+          return;
+        }
       }
       accumulator.clipUpdateSum(
           static_cast<double>(decodedValue.valueAt<T>(i)));

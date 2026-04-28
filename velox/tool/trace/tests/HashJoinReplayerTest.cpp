@@ -212,7 +212,7 @@ TEST_F(HashJoinReplayerTest, basic) {
   traceBuilder.maxDrivers(4)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_);
   for (const auto& [planNodeId, nodeSplits] : tracePlanWithSplits.splits) {
@@ -269,7 +269,7 @@ TEST_F(HashJoinReplayerTest, partialDriverIds) {
   traceBuilder.maxDrivers(4)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_);
   for (const auto& [planNodeId, nodeSplits] : tracePlanWithSplits.splits) {
@@ -324,6 +324,11 @@ TEST_F(HashJoinReplayerTest, partialDriverIds) {
 }
 
 TEST_F(HashJoinReplayerTest, runner) {
+  gflags::FlagSaver flagSaver;
+  // TraceReplayRunner prompts in CLI mode. The test populates all flags
+  // directly, so fast mode avoids waiting on stdin during test runs.
+  FLAGS_fast = true;
+
   const auto testDir = TempDirectoryPath::create();
   const auto traceRoot = fmt::format("{}/{}", testDir->getPath(), "traceRoot");
   std::shared_ptr<Task> task;
@@ -337,7 +342,7 @@ TEST_F(HashJoinReplayerTest, runner) {
   AssertQueryBuilder traceBuilder(tracePlanWithSplits.plan);
   traceBuilder.config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_);
   for (const auto& [planNodeId, nodeSplits] : tracePlanWithSplits.splits) {
@@ -440,7 +445,7 @@ DEBUG_ONLY_TEST_F(HashJoinReplayerTest, hashBuildSpill) {
   AssertQueryBuilder traceBuilder(tracePlanWithSplits.plan);
   traceBuilder.config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_)
       .config(core::QueryConfig::kSpillEnabled, true)
@@ -525,7 +530,7 @@ DEBUG_ONLY_TEST_F(HashJoinReplayerTest, hashProbeSpill) {
   AssertQueryBuilder traceBuilder(tracePlanWithSplits.plan);
   traceBuilder.config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId_)
       .config(core::QueryConfig::kSpillEnabled, true)

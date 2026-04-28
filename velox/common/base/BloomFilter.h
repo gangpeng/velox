@@ -146,8 +146,8 @@ class BloomFilter {
   // 64-bit number. We combine these to get a 64-bit number with up to 4 bits
   // set.
   inline static uint64_t bloomMask(uint64_t hashCode) {
-    return (1L << (hashCode & 63)) | (1L << ((hashCode >> 6) & 63)) |
-        (1L << ((hashCode >> 12) & 63)) | (1L << ((hashCode >> 18) & 63));
+    return (1LL << (hashCode & 63)) | (1LL << ((hashCode >> 6) & 63)) |
+        (1LL << ((hashCode >> 12) & 63)) | (1LL << ((hashCode >> 18) & 63));
   }
 
   // Skip 24 bits used for bloomMask and use the next N bits of the hash code

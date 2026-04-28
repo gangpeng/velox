@@ -26,6 +26,21 @@
 
 namespace facebook::velox {
 
+// Helper trait: true if folly::hasher<T> is defined (callable with T).
+#ifdef _MSC_VER
+namespace detail {
+template <typename T, typename = void>
+struct is_folly_hashable : std::false_type {};
+template <typename T>
+struct is_folly_hashable<
+    T,
+    std::void_t<decltype(folly::hasher<T>{}(std::declval<const T&>()))>>
+    : std::true_type {};
+} // namespace detail
+template <typename T>
+inline constexpr bool kFollyHashable = detail::is_folly_hashable<T>::value;
+#endif
+
 #ifdef VELOX_ENABLE_LOAD_SIMD_VALUE_BUFFER
 // Here are some common intel intrsic operations. Please refer to
 // https://software.intel.com/sites/landingpage/IntrinsicsGuide for examples.
@@ -90,6 +105,11 @@ std::unique_ptr<SimpleVector<uint64_t>> FlatVector<T>::hashAll() const {
       AlignedBuffer::allocate<uint64_t>(BaseVector::length_, BaseVector::pool_);
   auto hashData = hashBuffer->asMutable<uint64_t>();
 
+#ifdef _MSC_VER
+  if constexpr (!kFollyHashable<T>) {
+    VELOX_FAIL("hashAll() is not supported for this type on this platform");
+  } else {
+#endif
   folly::hasher<T> hasher;
   if (!BaseVector::rawNulls_) {
     VELOX_DCHECK_NOT_NULL(rawValues_);
@@ -105,6 +125,9 @@ std::unique_ptr<SimpleVector<uint64_t>> FlatVector<T>::hashAll() const {
       }
     }
   }
+#ifdef _MSC_VER
+  }
+#endif
   return std::make_unique<FlatVector<uint64_t>>(
       BaseVector::pool_,
       BIGINT(),

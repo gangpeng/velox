@@ -313,8 +313,13 @@ std::vector<std::string> listFolders(std::string_view path) {
   auto fileSystem = filesystems::getFileSystem("/", nullptr);
   for (auto& p : std::filesystem::recursive_directory_iterator(
            fileSystem->extractPath(path))) {
-    if (p.is_directory())
-      folders.push_back(p.path().string());
+    if (p.is_directory()) {
+      auto folderPath = p.path().string();
+#ifdef _WIN32
+      std::replace(folderPath.begin(), folderPath.end(), '\\', '/');
+#endif
+      folders.push_back(std::move(folderPath));
+    }
   }
   return folders;
 }

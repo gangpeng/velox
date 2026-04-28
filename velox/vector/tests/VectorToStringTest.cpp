@@ -148,7 +148,9 @@ TEST_F(VectorToStringTest, nullableDecimals) {
       "4: null");
 
   auto longDecimalFlatVector = makeNullableFlatVector<int128_t>(
-      {1000265, 35610, -314159, 7, std::nullopt}, DECIMAL(20, 4));
+      {int128_t(1000265), int128_t(35610), int128_t(-314159), int128_t(7),
+       std::nullopt},
+      DECIMAL(20, 4));
   ASSERT_EQ(
       longDecimalFlatVector->toString(),
       "[FLAT DECIMAL(20, 4): 5 elements, 1 nulls]");

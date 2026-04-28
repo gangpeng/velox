@@ -182,8 +182,8 @@ class TimerTree {
   uint64_t now() const;
 
   /// Returns the current thread CPU time in nanoseconds.
-  /// Uses clock_gettime(CLOCK_THREAD_CPUTIME_ID) to measure user+system CPU
-  /// time for the calling thread.
+  /// Uses the process thread-CPU abstraction so platform-specific APIs stay in
+  /// one place.
   uint64_t cpuNow() const;
 
   /// Walks (or creates) the node addressed by a `/`-separated path.

@@ -341,7 +341,7 @@ static inline void unpack9to15(
 
   uint8_t shift1 = bitWidth * 4;
   uint8_t shift2 = bytes1 * 8 - shift1;
-  uint64_t valueMask = (1L << shift1) - 1;
+  uint64_t valueMask = (1LL << shift1) - 1;
 
   // Process bitWidth bytes (2 * 4 values) a time.
   auto writeEndOffset = outputBuffer + numValues;

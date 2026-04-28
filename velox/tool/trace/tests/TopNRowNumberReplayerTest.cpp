@@ -164,7 +164,7 @@ TEST_F(TopNRowNumberReplayerTest, basic) {
   traceBuilder.maxDrivers(1)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, topNRowNumberId_);
   auto traceResult =
@@ -205,7 +205,7 @@ TEST_F(TopNRowNumberReplayerTest, withoutRowNumber) {
   traceBuilder.maxDrivers(1)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, topNRowNumberId_);
   auto traceResult =
@@ -246,7 +246,7 @@ TEST_F(TopNRowNumberReplayerTest, multiplePartitions) {
   traceBuilder.maxDrivers(1)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, topNRowNumberId_);
   auto traceResult =
@@ -287,7 +287,7 @@ TEST_F(TopNRowNumberReplayerTest, noPartitionKeys) {
   traceBuilder.maxDrivers(1)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, topNRowNumberId_);
   auto traceResult =
@@ -330,7 +330,7 @@ TEST_F(TopNRowNumberReplayerTest, multipleSortingKeys) {
   traceBuilder.maxDrivers(1)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, topNRowNumberId_);
   auto traceResult =
@@ -371,7 +371,7 @@ TEST_F(TopNRowNumberReplayerTest, limitOne) {
   traceBuilder.maxDrivers(1)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, topNRowNumberId_);
   auto traceResult =

@@ -33,6 +33,7 @@ velox_add_library(
   RawVector.cpp
   SharedArbitrator.cpp
   StreamArena.cpp
+  SystemMemory.cpp
 )
 
 velox_link_libraries(

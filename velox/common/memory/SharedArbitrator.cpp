@@ -17,7 +17,9 @@
 #include "velox/common/memory/SharedArbitrator.h"
 #include <folly/system/HardwareConcurrency.h>
 #include <folly/system/ThreadName.h>
+#ifndef _WIN32
 #include <pthread.h>
+#endif
 #include <mutex>
 #include "velox/common/base/AsyncSource.h"
 #include "velox/common/base/Exceptions.h"
@@ -575,6 +577,9 @@ void SharedArbitrator::sortCandidatesByReclaimableFreeCapacity(
       candidates.begin(),
       candidates.end(),
       [&](const ArbitrationCandidate& lhs, const ArbitrationCandidate& rhs) {
+        if (lhs.reclaimableFreeCapacity == rhs.reclaimableFreeCapacity) {
+          return lhs.participant->id() > rhs.participant->id();
+        }
         return lhs.reclaimableFreeCapacity > rhs.reclaimableFreeCapacity;
       });
   TestValue::adjust(
@@ -589,6 +594,9 @@ SharedArbitrator::sortAndGroupSpillCandidates(
       candidates.begin(),
       candidates.end(),
       [](const ArbitrationCandidate& lhs, const ArbitrationCandidate& rhs) {
+        if (lhs.reclaimableUsedCapacity == rhs.reclaimableUsedCapacity) {
+          return lhs.participant->id() > rhs.participant->id();
+        }
         return lhs.reclaimableUsedCapacity > rhs.reclaimableUsedCapacity;
       });
 
@@ -629,6 +637,12 @@ SharedArbitrator::sortAndGroupSpillCandidates(
                 rhs.participant->name());
           }
           if (lhsReclaimer->priority() == rhsReclaimer->priority()) {
+            if (lhs.reclaimableUsedCapacity == rhs.reclaimableUsedCapacity) {
+              // Keep equal spill candidates deterministic across unordered_map
+              // iteration orders and prefer newer participants when all
+              // priority/capacity signals are tied.
+              return lhs.participant->id() > rhs.participant->id();
+            }
             return lhs.reclaimableUsedCapacity > rhs.reclaimableUsedCapacity;
           }
           return lhsReclaimer->priority() > rhsReclaimer->priority();
@@ -654,7 +668,13 @@ SharedArbitrator::sortAndGroupAbortCandidates(
         if (lhsReclaimer == nullptr || rhsReclaimer == nullptr) {
           // Participants without reclaimer are treated as low priority, putting
           // them in front.
+          if (lhsReclaimer == rhsReclaimer) {
+            return lhs.participant->id() > rhs.participant->id();
+          }
           return (lhsReclaimer == nullptr) > (rhsReclaimer == nullptr);
+        }
+        if (lhsReclaimer->priority() == rhsReclaimer->priority()) {
+          return lhs.participant->id() > rhs.participant->id();
         }
         return lhsReclaimer->priority() > rhsReclaimer->priority();
       });

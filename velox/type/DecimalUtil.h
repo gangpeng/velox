@@ -17,6 +17,7 @@
 #pragma once
 
 #include <charconv>
+#include <sstream>
 #include <string>
 #include "velox/common/base/CheckedArithmetic.h"
 #include "velox/common/base/CountBits.h"
@@ -28,9 +29,77 @@
 
 namespace facebook::velox {
 
+// On MSVC, absl::int128 arithmetic is not constexpr (C2131), so we provide
+// pre-computed values using absl::MakeInt128 for entries that exceed int64_t.
+
 /// A static class that holds helper functions for DECIMAL type.
 class DecimalUtil {
  public:
+#ifdef _MSC_VER
+  // MSVC: absl::int128::operator* is not constexpr. Use inline static const
+  // with pre-computed literal values for the large entries.
+  inline static const int128_t kPowersOfTen[LongDecimalType::kMaxPrecision + 1] = {
+      absl::MakeInt128(0, 1ULL),
+      absl::MakeInt128(0, 10ULL),
+      absl::MakeInt128(0, 100ULL),
+      absl::MakeInt128(0, 1'000ULL),
+      absl::MakeInt128(0, 10'000ULL),
+      absl::MakeInt128(0, 100'000ULL),
+      absl::MakeInt128(0, 1'000'000ULL),
+      absl::MakeInt128(0, 10'000'000ULL),
+      absl::MakeInt128(0, 100'000'000ULL),
+      absl::MakeInt128(0, 1'000'000'000ULL),
+      absl::MakeInt128(0, 10'000'000'000ULL),
+      absl::MakeInt128(0, 100'000'000'000ULL),
+      absl::MakeInt128(0, 1'000'000'000'000ULL),
+      absl::MakeInt128(0, 10'000'000'000'000ULL),
+      absl::MakeInt128(0, 100'000'000'000'000ULL),
+      absl::MakeInt128(0, 1'000'000'000'000'000ULL),
+      absl::MakeInt128(0, 10'000'000'000'000'000ULL),
+      absl::MakeInt128(0, 100'000'000'000'000'000ULL),
+      absl::MakeInt128(0, 1'000'000'000'000'000'000ULL),
+      // 10^19
+      absl::MakeInt128(0x0, 0x8AC7230489E80000ULL),
+      // 10^20
+      absl::MakeInt128(0x5, 0x6BC75E2D63100000ULL),
+      // 10^21
+      absl::MakeInt128(0x36, 0x35C9ADC5DEA00000ULL),
+      // 10^22
+      absl::MakeInt128(0x21E, 0x19E0C9BAB2400000ULL),
+      // 10^23
+      absl::MakeInt128(0x152D, 0x02C7E14AF6800000ULL),
+      // 10^24
+      absl::MakeInt128(0xD3C2, 0x1BCECCEDA1000000ULL),
+      // 10^25
+      absl::MakeInt128(0x84595, 0x161401484A000000ULL),
+      // 10^26
+      absl::MakeInt128(0x52B7D2, 0xDCC80CD2E4000000ULL),
+      // 10^27
+      absl::MakeInt128(0x33B2E3C, 0x9FD0803CE8000000ULL),
+      // 10^28
+      absl::MakeInt128(0x204FCE5E, 0x3E25026110000000ULL),
+      // 10^29
+      absl::MakeInt128(0x1431E0FAE, 0x6D7217CAA0000000ULL),
+      // 10^30
+      absl::MakeInt128(0xC9F2C9CD0, 0x4674EDEA40000000ULL),
+      // 10^31
+      absl::MakeInt128(0x7E37BE2022, 0xC0914B2680000000ULL),
+      // 10^32
+      absl::MakeInt128(0x4EE2D6D415B, 0x85ACEF8100000000ULL),
+      // 10^33
+      absl::MakeInt128(0x314DC6448D93, 0x38C15B0A00000000ULL),
+      // 10^34
+      absl::MakeInt128(0x1ED09BEAD87C0, 0x378D8E6400000000ULL),
+      // 10^35
+      absl::MakeInt128(0x13426172C74D82, 0x2B878FE800000000ULL),
+      // 10^36
+      absl::MakeInt128(0xC097CE7BC90715, 0xB34B9F1000000000ULL),
+      // 10^37
+      absl::MakeInt128(0x785EE10D5DA46D9, 0x00F436A000000000ULL),
+      // 10^38
+      absl::MakeInt128(0x4B3B4CA85A86C47A, 0x098A224000000000ULL),
+  };
+#else
   static constexpr int128_t kPowersOfTen[LongDecimalType::kMaxPrecision + 1] = {
       1,
       10,
@@ -73,7 +142,18 @@ class DecimalUtil {
           (int128_t)10,
       1'000'000'000'000'000'000 * (int128_t)1'000'000'000'000'000'000 *
           (int128_t)100};
+#endif
 
+#ifdef _MSC_VER
+  inline static const int128_t kLongDecimalMin =
+      -kPowersOfTen[LongDecimalType::kMaxPrecision] + int128_t(1);
+  inline static const int128_t kLongDecimalMax =
+      kPowersOfTen[LongDecimalType::kMaxPrecision] - int128_t(1);
+  inline static const int128_t kShortDecimalMin =
+      -kPowersOfTen[ShortDecimalType::kMaxPrecision] + int128_t(1);
+  inline static const int128_t kShortDecimalMax =
+      kPowersOfTen[ShortDecimalType::kMaxPrecision] - int128_t(1);
+#else
   static constexpr int128_t kLongDecimalMin =
       -kPowersOfTen[LongDecimalType::kMaxPrecision] + 1;
   static constexpr int128_t kLongDecimalMax =
@@ -82,12 +162,18 @@ class DecimalUtil {
       -kPowersOfTen[ShortDecimalType::kMaxPrecision] + 1;
   static constexpr int128_t kShortDecimalMax =
       kPowersOfTen[ShortDecimalType::kMaxPrecision] - 1;
+#endif
 
   /// Scale threshold for scientific notation.
   static constexpr int32_t kMinScientificNotationScale = 6;
 
   static constexpr uint64_t kInt64Mask = ~(static_cast<uint64_t>(1) << 63);
+#ifdef _MSC_VER
+  // absl::uint128 shift is not constexpr on MSVC.
+  inline static const uint128_t kInt128Mask = (static_cast<uint128_t>(1) << 127);
+#else
   static constexpr uint128_t kInt128Mask = (static_cast<uint128_t>(1) << 127);
+#endif
 
   FOLLY_ALWAYS_INLINE static void valueInRange(int128_t value) {
     VELOX_USER_CHECK(
@@ -169,10 +255,26 @@ class DecimalUtil {
     auto scaleDifference = toScale - fromScale;
     bool isOverflow = false;
     if (scaleDifference >= 0) {
+#ifdef _MSC_VER
+      {
+        const int128_t factor = DecimalUtil::kPowersOfTen[scaleDifference];
+        if (factor != 0) {
+          static const int128_t kInt128Max = absl::Int128Max();
+          static const int128_t kInt128Min = absl::Int128Min();
+          if (rescaledValue > kInt128Max / factor ||
+              rescaledValue < kInt128Min / factor) {
+            isOverflow = true;
+          } else {
+            rescaledValue *= factor;
+          }
+        }
+      }
+#else
       isOverflow = __builtin_mul_overflow(
           rescaledValue,
           DecimalUtil::kPowersOfTen[scaleDifference],
           &rescaledValue);
+#endif
     } else {
       scaleDifference = -scaleDifference;
       const auto scalingFactor = DecimalUtil::kPowersOfTen[scaleDifference];
@@ -200,8 +302,25 @@ class DecimalUtil {
   inline static std::optional<TOutput>
   rescaleInt(TInput inputValue, int toPrecision, int toScale) {
     int128_t rescaledValue = static_cast<int128_t>(inputValue);
+#ifdef _MSC_VER
+    bool isOverflow = false;
+    {
+      const int128_t factor = DecimalUtil::kPowersOfTen[toScale];
+      if (factor != 0) {
+        static const int128_t kInt128Max = absl::Int128Max();
+        static const int128_t kInt128Min = absl::Int128Min();
+        if (rescaledValue > kInt128Max / factor ||
+            rescaledValue < kInt128Min / factor) {
+          isOverflow = true;
+        } else {
+          rescaledValue *= factor;
+        }
+      }
+    }
+#else
     bool isOverflow = __builtin_mul_overflow(
         rescaledValue, DecimalUtil::kPowersOfTen[toScale], &rescaledValue);
+#endif
     // Check overflow.
     if (!valueInPrecisionRange(rescaledValue, toPrecision) || isOverflow) {
       VELOX_USER_FAIL(
@@ -235,9 +354,24 @@ class DecimalUtil {
       maxValue = kMaxDoubleBelowInt128Max;
     }
 
+#ifdef _MSC_VER
+    // MSVC: std::numeric_limits<int128_t> has no specialization; use absl helpers.
+    {
+      TInput minVal;
+      if constexpr (std::is_same_v<TOutput, int64_t>) {
+        minVal = static_cast<TInput>(std::numeric_limits<int64_t>::min());
+      } else {
+        minVal = static_cast<TInput>(absl::Int128Min());
+      }
+      if (value <= minVal || value > maxValue) {
+        return Status::UserError("Result overflows.");
+      }
+    }
+#else
     if (value <= std::numeric_limits<TOutput>::min() || value > maxValue) {
       return Status::UserError("Result overflows.");
     }
+#endif
 
     uint8_t digits;
     if constexpr (std::is_same_v<TInput, float>) {
@@ -264,13 +398,65 @@ class DecimalUtil {
     // consider the result becoming infinite as DOUBLE_MAX * 10^38 <
     // LONG_DOUBLE_MAX.
     long double scaledValue = std::round(
-        (long double)value * DecimalUtil::kPowersOfTen[fractionDigits]);
+        (long double)value * static_cast<long double>(DecimalUtil::kPowersOfTen[fractionDigits]));
+#ifdef _MSC_VER
+    // MSVC: folly::tryTo<int128_t>(long double) is not supported; do a manual
+    // range check and direct cast instead.
+    TOutput rescaledValue;
+    {
+      long double minCast, maxCast;
+      if constexpr (std::is_same_v<TOutput, int64_t>) {
+        minCast = static_cast<long double>(std::numeric_limits<int64_t>::min());
+        maxCast = static_cast<long double>(std::numeric_limits<int64_t>::max());
+      } else {
+        minCast = static_cast<long double>(absl::Int128Min());
+        maxCast = static_cast<long double>(absl::Int128Max());
+      }
+      if (scaledValue < minCast || scaledValue > maxCast) {
+        return Status::UserError("Result overflows.");
+      }
+      rescaledValue = static_cast<TOutput>(scaledValue);
+    }
+#else
     const auto result = folly::tryTo<TOutput>(scaledValue);
     if (result.hasError()) {
       return Status::UserError("Result overflows.");
     }
     TOutput rescaledValue = result.value();
+#endif
     if (scale > fractionDigits) {
+#ifdef _MSC_VER
+      // MSVC: __builtin_mul_overflow is not available; use a manual check.
+      {
+        const TOutput factor =
+            static_cast<TOutput>(DecimalUtil::kPowersOfTen[scale - fractionDigits]);
+        bool isOverflow = false;
+        if constexpr (std::is_same_v<TOutput, int128_t>) {
+          const int128_t kMax = absl::Int128Max();
+          const int128_t kMin = absl::Int128Min();
+          if (factor != 0 &&
+              (rescaledValue > kMax / factor ||
+               rescaledValue < kMin / factor)) {
+            isOverflow = true;
+          } else {
+            rescaledValue *= factor;
+          }
+        } else {
+          if (factor != 0 &&
+              (rescaledValue >
+                   std::numeric_limits<int64_t>::max() / factor ||
+               rescaledValue <
+                   std::numeric_limits<int64_t>::min() / factor)) {
+            isOverflow = true;
+          } else {
+            rescaledValue *= factor;
+          }
+        }
+        if (isOverflow) {
+          return Status::UserError("Result overflows.");
+        }
+      }
+#else
       bool isOverflow = __builtin_mul_overflow(
           rescaledValue,
           DecimalUtil::kPowersOfTen[scale - fractionDigits],
@@ -278,6 +464,7 @@ class DecimalUtil {
       if (isOverflow) {
         return Status::UserError("Result overflows.");
       }
+#endif
     } else {
       const auto scalingFactor =
           DecimalUtil::kPowersOfTen[fractionDigits - scale];
@@ -317,8 +504,8 @@ class DecimalUtil {
         unsignedDividendRescaled,
         R(DecimalUtil::kPowersOfTen[aRescale]),
         "Decimal");
-    R quotient = unsignedDividendRescaled / unsignedDivisor;
-    R remainder = unsignedDividendRescaled % unsignedDivisor;
+    R quotient = static_cast<R>(unsignedDividendRescaled / unsignedDivisor);
+    R remainder = static_cast<R>(unsignedDividendRescaled % unsignedDivisor);
     if (!noRoundUp && static_cast<const B>(remainder) * 2 >= unsignedDivisor) {
       ++quotient;
     }
@@ -330,6 +517,61 @@ class DecimalUtil {
   /// scale to varchar. A varchar's size is estimated with unscaled value
   /// digits, dot, leading zero, and possible minus sign.
   static int32_t maxStringViewSize(int precision, int scale);
+
+  /// Converts a 128-bit unsigned integer to decimal characters, writing into
+  /// [first, last). Returns a to_chars_result-compatible struct with ptr and
+  /// ec fields. On all platforms this handles absl::uint128 (MSVC) and
+  /// __uint128_t (GCC/Clang), since std::to_chars lacks 128-bit overloads on
+  /// MSVC.
+  static std::to_chars_result uint128ToChars(
+      char* first,
+      char* last,
+      uint128_t value) {
+    if (first >= last) {
+      return {last, std::errc::value_too_large};
+    }
+    if (value == 0) {
+      *first = '0';
+      return {first + 1, std::errc()};
+    }
+    // Write digits in reverse, then reverse them.
+    char* start = first;
+    char* cur = first;
+    while (value > 0) {
+      if (cur >= last) {
+        return {last, std::errc::value_too_large};
+      }
+#ifdef _MSC_VER
+      *cur++ = '0' + static_cast<char>(
+                         static_cast<uint64_t>(value % uint128_t{10}));
+      value /= uint128_t{10};
+#else
+      *cur++ = '0' + static_cast<char>(static_cast<uint64_t>(value % 10));
+      value /= 10;
+#endif
+    }
+    std::reverse(start, cur);
+    return {cur, std::errc()};
+  }
+
+  /// Converts a 128-bit signed integer to decimal characters, writing into
+  /// [first, last). Returns a to_chars_result-compatible struct.
+  static std::to_chars_result int128ToChars(
+      char* first,
+      char* last,
+      int128_t value) {
+    if (value < 0) {
+      if (first >= last) {
+        return {last, std::errc::value_too_large};
+      }
+      *first++ = '-';
+      // Negate safely as uint128_t to handle INT128_MIN.
+      uint128_t uval = uint128_t{0} - static_cast<uint128_t>(value);
+      auto res = uint128ToChars(first, last, uval);
+      return res;
+    }
+    return uint128ToChars(first, last, static_cast<uint128_t>(value));
+  }
 
   /// @brief Convert the unscaled value of a decimal to string and write to raw
   /// string buffer from start position.
@@ -384,7 +626,7 @@ class DecimalUtil {
           // This is consistent with Spark's behavior.
           const auto digits = countDigits(unscaledValue);
           auto coefficientBuf = std::vector<char>(digits);
-          const auto coefficient = std::to_chars(
+          const auto coefficient = int128ToChars(
               coefficientBuf.data(),
               coefficientBuf.data() + digits,
               unscaledValue);
@@ -413,7 +655,7 @@ class DecimalUtil {
           return writePosition - startPosition;
         }
       }
-      auto [position, errorCode] = std::to_chars(
+      auto [position, errorCode] = int128ToChars(
           writePosition,
           writePosition + maxSize,
           unscaledValue / DecimalUtil::kPowersOfTen[scale]);
@@ -433,7 +675,7 @@ class DecimalUtil {
         writePosition += numLeadingZeros;
         // Append remaining fraction digits.
         auto result =
-            std::to_chars(writePosition, writePosition + maxSize, fraction);
+            uint128ToChars(writePosition, writePosition + maxSize, fraction);
         VELOX_DCHECK_EQ(
             result.ec,
             std::errc(),
@@ -455,9 +697,20 @@ class DecimalUtil {
       bool isResultNegative) {
     __uint128_t unsignedSum = (__uint128_t)lhs + (__uint128_t)rhs;
     // Ignore overflow value.
+#ifdef _MSC_VER
+    // absl::uint128 → absl::int128 requires explicit construction on MSVC.
+    // Clear bit 127 (the overflow indicator) by masking the high word.
+    sum = absl::MakeInt128(
+        static_cast<int64_t>(
+            absl::Uint128High64(unsignedSum) & 0x7FFFFFFFFFFFFFFFULL),
+        absl::Uint128Low64(unsignedSum));
+    sum = isResultNegative ? -sum : sum;
+    return static_cast<int64_t>(absl::Uint128Low64(unsignedSum >> 127));
+#else
     sum = (int128_t)unsignedSum & ~kOverflowMultiplier;
     sum = isResultNegative ? -sum : sum;
     return (unsignedSum >> 127);
+#endif
   }
 
   /// Adds two signed 128-bit numbers (int128_t), calculates the sum, and
@@ -510,8 +763,21 @@ class DecimalUtil {
       int64_t overflow) {
     // Value is valid if the conditions below are true.
     if ((overflow == 1 && sum < 0) || (overflow == -1 && sum > 0)) {
+#ifdef _MSC_VER
+      // On MSVC, kOverflowMultiplier is absl::uint128. To avoid mixed-type
+      // 128-bit arithmetic, do the computation in uint128_t then cast.
+      // overflow is +1 or -1, kOverflowMultiplier = 2^127.
+      // For overflow==1:  result = sum + 2^127 (sum is negative, result fits)
+      // For overflow==-1: result = sum - 2^127 (sum is positive, result fits)
+      uint128_t usum = static_cast<uint128_t>(sum);
+      uint128_t uresult = (overflow >= 0)
+          ? (usum + kOverflowMultiplier)
+          : (usum - kOverflowMultiplier);
+      return static_cast<int128_t>(uresult);
+#else
       return static_cast<int128_t>(
           DecimalUtil::kOverflowMultiplier * overflow + sum);
+#endif
     }
     if (overflow != 0) {
       // The actual overflow occurred.
@@ -599,7 +865,11 @@ class DecimalUtil {
     return status;
   }
 
+#ifdef _MSC_VER
+  inline static const __uint128_t kOverflowMultiplier = ((__uint128_t)1 << 127);
+#else
   static constexpr __uint128_t kOverflowMultiplier = ((__uint128_t)1 << 127);
+#endif
 
  private:
   // Parses the string view to decimal components, which contains the

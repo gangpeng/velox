@@ -15,6 +15,7 @@
  */
 #include "velox/serializers/KeyEncoder.h"
 
+#include <numeric>
 #include "velox/common/base/SimdUtil.h"
 #include "velox/type/Timestamp.h"
 #include "velox/vector/FlatVector.h"
@@ -540,13 +541,13 @@ void encodeDouble(
         const auto value = decodedVector.valueAt<double>(row);
         int64_t longValue = doubleToLong(value);
         // Normalize -0.0 to +0.0 by clearing sign bit when value is zero
-        if ((longValue & ~(1L << 63)) == 0) {
+        if ((longValue & ~(1LL << 63)) == 0) {
           longValue = 0;
         }
-        if ((longValue & (1L << 63)) != 0) {
+        if ((longValue & (1LL << 63)) != 0) {
           longValue = ~longValue;
         } else {
-          longValue = longValue ^ (1L << 63);
+          longValue = longValue ^ (1LL << 63);
         }
         encodeUnsignedLong(longValue, descending, rowOffsets[row]);
       }
@@ -558,13 +559,13 @@ void encodeDouble(
       const auto value = decodedVector.valueAt<double>(row);
       int64_t longValue = doubleToLong(value);
       // Normalize -0.0 to +0.0 by clearing sign bit when value is zero
-      if ((longValue & ~(1L << 63)) == 0) {
+      if ((longValue & ~(1LL << 63)) == 0) {
         longValue = 0;
       }
-      if ((longValue & (1L << 63)) != 0) {
+      if ((longValue & (1LL << 63)) != 0) {
         longValue = ~longValue;
       } else {
-        longValue = longValue ^ (1L << 63);
+        longValue = longValue ^ (1LL << 63);
       }
       encodeUnsignedLong(longValue, descending, rowOffsets[row]);
     }
@@ -592,10 +593,10 @@ void encodeReal(
         if ((intValue & ~(1 << 31)) == 0) {
           intValue = 0;
         }
-        if ((intValue & (1L << 31)) != 0) {
+        if ((intValue & (1LL << 31)) != 0) {
           intValue = ~intValue;
         } else {
-          intValue = intValue ^ (1L << 31);
+          intValue = intValue ^ (1LL << 31);
         }
         encodeUnsignedInteger(intValue, descending, rowOffsets[row]);
       }
@@ -610,10 +611,10 @@ void encodeReal(
       if ((intValue & ~(1 << 31)) == 0) {
         intValue = 0;
       }
-      if ((intValue & (1L << 31)) != 0) {
+      if ((intValue & (1LL << 31)) != 0) {
         intValue = ~intValue;
       } else {
-        intValue = intValue ^ (1L << 31);
+        intValue = intValue ^ (1LL << 31);
       }
       encodeUnsignedInteger(intValue, descending, rowOffsets[row]);
     }

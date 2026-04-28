@@ -106,11 +106,15 @@ static char partSzFormat[100] = {0};
 static char partSzBrandFormat[100] = {0};
 static char suppSzFormat[100] = {0};
 
+// Forward declaration at namespace scope to ensure correct name mangling on
+// all compilers (MSVC does not apply the enclosing namespace to function
+// declarations made inside a function body).
+char** mk_ascdate PROTO((void));
+
 // Initializes a series of buffers and structures required to generate data.
 // Clients must ensure this function is called before any of the functions
 // below.
 void init_build_buffers() {
-  char** mk_ascdate PROTO((void));
   asc_date = mk_ascdate();
 
   sprintf(orderSzFormat, O_CLRK_FMT, 9, &HUGE_FORMAT[1]);
@@ -337,7 +341,7 @@ long mk_supp(DSS_HUGE index, supplier_t* s, DBGenContext* ctx) {
 }
 
 struct {
-  char* mdes;
+  const char* mdes;
   long days;
   long dcnt;
 } months[] =

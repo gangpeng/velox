@@ -17,7 +17,14 @@
 #include <gtest/gtest.h>
 #include <chrono>
 
+#ifdef _MSC_VER
+#pragma push_macro("BOOLEAN")
+#undef BOOLEAN
+#endif
 #include "duckdb/common/types.hpp" // @manual
+#ifdef _MSC_VER
+#pragma pop_macro("BOOLEAN")
+#endif
 #include "velox/duckdb/conversion/DuckConversion.h"
 #include "velox/exec/Cursor.h"
 #include "velox/exec/tests/utils/QueryAssertions.h"
@@ -64,8 +71,15 @@ template <>
 ::duckdb::Value duckValueAt<TypeKind::BOOLEAN>(
     const VectorPtr& vector,
     vector_size_t index) {
-  return ::duckdb::Value::BOOLEAN(
-      vector->as<SimpleVector<bool>>()->valueAt(index));
+  auto val = vector->as<SimpleVector<bool>>()->valueAt(index);
+#ifdef _MSC_VER
+#pragma push_macro("BOOLEAN")
+#undef BOOLEAN
+#endif
+  return ::duckdb::Value::BOOLEAN(val);
+#ifdef _MSC_VER
+#pragma pop_macro("BOOLEAN")
+#endif
 }
 
 template <>
@@ -125,7 +139,7 @@ template <>
 
   if (type->isIntervalDayTime()) {
     static constexpr int64_t kMicrosecondsInDay =
-        1000L * 1000L * 60L * 60L * 24L;
+        1000LL * 1000LL * 60LL * 60LL * 24LL;
     const auto interval = vector->as<SimpleVector<int64_t>>()->valueAt(index);
     const int64_t microseconds = interval % kMicrosecondsInDay;
     const int64_t days = interval / kMicrosecondsInDay;
@@ -150,8 +164,8 @@ template <>
   using T = typename KindToFlatVector<TypeKind::HUGEINT>::WrapperType;
   auto val = vector->as<SimpleVector<T>>()->valueAt(index);
   auto duckVal = ::duckdb::hugeint_t();
-  duckVal.lower = (val << 64) >> 64;
-  duckVal.upper = (val >> 64);
+  duckVal.lower = static_cast<uint64_t>(val);
+  duckVal.upper = static_cast<int64_t>(val >> 64);
   if (vector->type()->isLongDecimal()) {
     auto type = vector->type()->asLongDecimal();
     return ::duckdb::Value::DECIMAL(

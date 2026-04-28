@@ -21,10 +21,12 @@
 #include <folly/executors/IOThreadPoolExecutor.h>
 #include <folly/init/Init.h>
 #include <gflags/gflags.h>
+#ifndef _WIN32
 #include <sys/resource.h>
-#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#endif
+#include <sys/stat.h>
 #include "velox/exec/Cursor.h"
 #include "velox/exec/tests/utils/TpchQueryBuilder.h"
 

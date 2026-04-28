@@ -36,7 +36,7 @@ DSS_HUGE NextRand(DSS_HUGE seed);
 void permute(long* set, int cnt, seed_t* seed);
 void permute_dist(distribution* d, seed_t* seed, DBGenContext* ctx);
 long seed;
-char* eol[2] = {" ", "},"};
+const char* eol[2] = {" ", "},"};
 
 #define MAX_QUERY 22
 #define ITERATIONS 1000

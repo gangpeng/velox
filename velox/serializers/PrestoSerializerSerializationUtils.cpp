@@ -682,18 +682,23 @@ void serializeFlatVector(
       stream->appendNonNull(rows.size());
       AppendWindow<T> window(stream->values(), scratch);
       auto* output = window.get(rows.size());
-      if (stream->isLongDecimal()) {
-        copyWords(
-            output, rows.data(), rows.size(), rawValues, toJavaDecimalValue);
-      } else if (stream->isUuid()) {
-        copyWords(output, rows.data(), rows.size(), rawValues, toJavaUuidValue);
-      } else if (stream->isIpAddress()) {
-        copyWords(
-            output,
-            rows.data(),
-            rows.size(),
-            rawValues,
-            reverseIpAddressByteOrder);
+      if constexpr (std::is_same_v<T, int128_t>) {
+        if (stream->isLongDecimal()) {
+          copyWords(
+              output, rows.data(), rows.size(), rawValues, toJavaDecimalValue);
+        } else if (stream->isUuid()) {
+          copyWords(
+              output, rows.data(), rows.size(), rawValues, toJavaUuidValue);
+        } else if (stream->isIpAddress()) {
+          copyWords(
+              output,
+              rows.data(),
+              rows.size(),
+              rawValues,
+              reverseIpAddressByteOrder);
+        } else {
+          copyWords(output, rows.data(), rows.size(), rawValues);
+        }
       } else {
         copyWords(output, rows.data(), rows.size(), rawValues);
       }

@@ -17,6 +17,7 @@
 #include <fmt/core.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+#include <folly/Benchmark.h>
 
 #include "velox/common/base/SuccinctPrinter.h"
 #include "velox/common/base/VeloxException.h"
@@ -68,6 +69,23 @@ void doWork() {
   }
   // Prevent the compiler from optimizing away the loop.
   EXPECT_GE(x, 0);
+}
+
+template <typename CpuNow>
+void doCpuWorkUntilClockAdvances(CpuNow cpuNow) {
+  const auto start = cpuNow();
+  uint64_t n{0};
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(1);
+  while (cpuNow() == start && std::chrono::steady_clock::now() < deadline) {
+    // Windows thread CPU accounting advances in coarse ticks. Make CPU-time
+    // assertions wait for the platform clock instead of skipping them.
+    for (int i = 0; i < 100'000; ++i) {
+      n += static_cast<uint64_t>(i + 1) * 17;
+      n ^= n >> 7;
+    }
+    folly::doNotOptimizeAway(n);
+  }
 }
 
 /// Builds the expected header block for toString() output.
@@ -273,7 +291,7 @@ TEST_F(HierarchicalTimerTest, emptyTreeToString) {
 TEST_F(HierarchicalTimerTest, basicSingleTimer) {
   {
     ScopedTimer timer(tree_, "op");
-    doWork();
+    doCpuWorkUntilClockAdvances([&]() { return tree_.cpuNow(); });
   }
 
   const auto& topChildren = tree_.root().children();
@@ -801,13 +819,14 @@ TEST_F(HierarchicalTimerTest, toStringVerboseOutput) {
 }
 
 TEST_F(HierarchicalTimerTest, cpuNowReturnsNonZero) {
+  doCpuWorkUntilClockAdvances([&]() { return tree_.cpuNow(); });
   EXPECT_GT(tree_.cpuNow(), 0);
 }
 
 TEST_F(HierarchicalTimerTest, cpuTimeTrackedByScopedTimer) {
   {
     ScopedTimer t(tree_, "cpuWork");
-    doWork();
+    doCpuWorkUntilClockAdvances([&]() { return tree_.cpuNow(); });
   }
 
   const auto& roots = tree_.root().children();
@@ -826,7 +845,7 @@ TEST(HierarchicalTimerThreadLocalTest, scopedTimerUsesThreadInstance) {
 
   {
     ScopedTimer t("threadLocalOp");
-    doWork();
+    doCpuWorkUntilClockAdvances([&]() { return tree.cpuNow(); });
   }
 
   const auto& roots = tree.root().children();
@@ -1015,7 +1034,7 @@ TEST(HierarchicalTimerAutoNestingTest, autoNestingCpuTimeTracked) {
     ScopedTimer t1("outer");
     {
       ScopedTimer t2("inner");
-      doWork();
+      doCpuWorkUntilClockAdvances([&]() { return tree.cpuNow(); });
     }
   }
 

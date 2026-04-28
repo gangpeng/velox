@@ -1,4 +1,5 @@
 %option 8bit
+%option nounistd
 %{
 #include <vector>
 #include <memory>

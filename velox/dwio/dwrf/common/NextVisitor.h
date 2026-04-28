@@ -46,7 +46,7 @@ class NextVisitorWithNulls {
       return 0;
     }
     uint8_t nullBit = position_ & 63;
-    if ((nullWord & (1UL << nullBit)) == 0) {
+    if ((nullWord & (1ULL << nullBit)) == 0) {
       return 0;
     }
     // We have a null. We find the next non-null.

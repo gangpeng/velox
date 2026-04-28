@@ -443,11 +443,17 @@ TEST_P(MemoryPoolTest, usedBytes) {
   ASSERT_EQ(root->usedBytes(), 0);
 }
 
-TEST_P(MemoryPoolTest, DISABLED_memoryLeakCheck) {
+TEST_P(MemoryPoolTest, memoryLeakCheck) {
   gflags::FlagSaver flagSaver;
   testing::FLAGS_gtest_death_test_style = "fast";
   auto manager = getMemoryManager();
-  auto root = manager->addRootPool();
+  // Debug tracking records outstanding allocation callsites and turns a leaked
+  // allocation into a death-test failure at child pool destruction time.
+  auto root = manager->addRootPool(
+      "memoryLeakCheck",
+      kMaxMemory,
+      nullptr,
+      MemoryPool::DebugOptions{".*"});
 
   auto child = root->addLeafChild("elastic_quota", isLeafThreadSafe_);
   const int64_t kChunkSize{32L * MB};

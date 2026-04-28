@@ -190,7 +190,7 @@ FOLLY_ALWAYS_INLINE void PrestoHasher::hash<TypeKind::HUGEINT>(
     // The processing here is mainly for the convenience of hash computation.
     if (value < 0) {
       value *= -1;
-      value |= DecimalUtil::kInt128Mask;
+      value |= static_cast<int128_t>(DecimalUtil::kInt128Mask);
     }
     auto lower = HugeInt::lower(value);
     auto high = HugeInt::upper(value);

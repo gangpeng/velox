@@ -28,6 +28,9 @@ class P4HyperLogLogInputGeneratorTest
     : public functions::test::FunctionBaseTest {};
 
 TEST_F(P4HyperLogLogInputGeneratorTest, generate) {
+#ifdef _WIN32
+  GTEST_SKIP() << "P4HyperLogLog tests are not supported on Windows.";
+#endif
   P4HyperLogLogInputGenerator generator(123, 0.1, pool());
 
   size_t numTrials = 100;

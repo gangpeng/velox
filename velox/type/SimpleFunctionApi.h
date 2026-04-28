@@ -287,6 +287,12 @@ struct ConstantChecker {
       isConstantType<TArgs>::value...};
 };
 
+// Specialization for zero args to avoid zero-length array (not valid in C++).
+template <>
+struct ConstantChecker<> {
+  static constexpr bool isConstant[1] = {false};
+};
+
 /// CppToType templates for types introduced above.
 
 template <>
@@ -412,7 +418,7 @@ struct SimpleTypeTrait<CustomType<T, providesCustomComparison>>
   static constexpr bool isFixedWidth = physical_t::isFixedWidth;
 
   // This is different than the physical type name.
-  static constexpr char* name = T::typeName;
+  static inline const std::string name = T::typeName;
 };
 
 /// MaterializeType template.

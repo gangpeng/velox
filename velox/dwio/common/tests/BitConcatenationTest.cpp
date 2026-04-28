@@ -27,7 +27,7 @@ TEST(BitConcatenationTests, basic) {
   BitConcatenation bits(*pool);
   BufferPtr result;
 
-  std::vector<uint64_t> oneBits(10, ~0UL);
+  std::vector<uint64_t> oneBits(10, ~0ULL);
   std::vector<uint64_t> zeroBits(10, 0UL);
 
   // add only one bits, expect nullptr.

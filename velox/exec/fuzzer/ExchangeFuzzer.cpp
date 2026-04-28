@@ -17,6 +17,13 @@
 #include <boost/random/uniform_int_distribution.hpp>
 #include <folly/init/Init.h>
 
+#ifdef _WIN32
+#include <process.h>
+#define getpid _getpid
+#else
+#include <unistd.h>
+#endif
+
 #include "velox/common/memory/Memory.h"
 #include "velox/common/memory/MmapAllocator.h"
 #include "velox/core/QueryConfig.h"
@@ -39,7 +46,7 @@
 
 DEFINE_int32(max_tasks_per_stage, 16, "Max number of sources/destinations");
 DEFINE_int32(drivers_per_task, 4, "Number of threads in each task in shuffle");
-DEFINE_int64(shuffle_bytes, 4UL << 30, "Shuffle data volume in each step");
+DEFINE_int64(shuffle_bytes, 4ULL << 30, "Shuffle data volume in each step");
 DEFINE_int32(max_buffer_mb, 20, "Max buffer size for output/exchange per task");
 DEFINE_uint64(seed, 0, "Seed, 0 means random");
 
@@ -79,7 +86,7 @@ using namespace facebook::velox::test;
 /// shuffle. Supports saving and replaying generated test cases.
 class ExchangeFuzzer : public VectorTestBase {
  public:
-  static constexpr int64_t kMaxMemory = 6UL << 30; // 6GB
+  static constexpr int64_t kMaxMemory = 6ULL << 30; // 6GB
 
   /// Parameters for one test case.
   struct Params {
@@ -564,7 +571,7 @@ int main(int argc, char** argv) {
   folly::Init init{&argc, &argv};
   memory::MemoryManager::Options options;
   options.useMmapAllocator = true;
-  options.allocatorCapacity = 15UL << 30;
+  options.allocatorCapacity = 15ULL << 30;
   options.useMmapArena = true;
   options.mmapArenaCapacityRatio = 1;
   memory::MemoryManager::initialize(options);

@@ -205,10 +205,9 @@ BlockingState::BlockingState(
       future_(std::move(future)),
       operator_(op),
       reason_(reason),
-      sinceUs_(
-          std::chrono::duration_cast<std::chrono::microseconds>(
-              std::chrono::high_resolution_clock::now().time_since_epoch())
-              .count()) {
+      sinceUs_(std::chrono::duration_cast<std::chrono::microseconds>(
+                   std::chrono::high_resolution_clock::now().time_since_epoch())
+                   .count()) {
   // Set before leaving the thread.
   driver_->state().hasBlockingFuture = true;
   driver_->state().blockingStartUs = sinceUs_;
@@ -417,21 +416,15 @@ CpuWallTiming Driver::processLazyIoStats(
   auto lockStats = op.stats().wlock();
 
   // Checks and tries to update cpu time from lazy loads.
+  int64_t cpuDelta = 0;
   auto it = lockStats->runtimeStats.find(std::string(LazyVector::kCpuNanos));
-  if (it == lockStats->runtimeStats.end()) {
-    // Return early if no lazy activity.  Lazy CPU and wall times are recorded
-    // together, checking one is enough.
-    return timing;
+  if (it != lockStats->runtimeStats.end()) {
+    const int64_t cpu = it->second.sum;
+    cpuDelta = std::max<int64_t>(0, cpu - lockStats->lastLazyCpuNanos);
+    if (cpuDelta > 0) {
+      lockStats->lastLazyCpuNanos = cpu;
+    }
   }
-  const int64_t cpu = it->second.sum;
-  auto cpuDelta = std::max<int64_t>(0, cpu - lockStats->lastLazyCpuNanos);
-  if (cpuDelta == 0) {
-    // Return early if no change.  Checking one counter is enough.  If this did
-    // not change and the other did, the change would be insignificant and
-    // tracking would catch up when this counter next changed.
-    return timing;
-  }
-  lockStats->lastLazyCpuNanos = cpu;
 
   // Checks and tries to update wall time from lazy loads.
   int64_t wallDelta = 0;
@@ -449,22 +442,27 @@ CpuWallTiming Driver::processLazyIoStats(
   it = lockStats->runtimeStats.find(std::string(LazyVector::kInputBytes));
   if (it != lockStats->runtimeStats.end()) {
     const int64_t inputBytes = it->second.sum;
-    inputBytesDelta = inputBytes - lockStats->lastLazyInputBytes;
+    inputBytesDelta =
+        std::max<int64_t>(0, inputBytes - lockStats->lastLazyInputBytes);
     if (inputBytesDelta > 0) {
       lockStats->lastLazyInputBytes = inputBytes;
     }
+  }
+
+  if (cpuDelta == 0 && wallDelta == 0 && inputBytesDelta == 0) {
+    // No lazy activity changed since the last call.
+    return timing;
   }
 
   lockStats.unlock();
   cpuDelta = std::min<int64_t>(cpuDelta, timing.cpuNanos);
   wallDelta = std::min<int64_t>(wallDelta, timing.wallNanos);
   lockStats = operators_[0]->stats().wlock();
-  lockStats->getOutputTiming.add(
-      CpuWallTiming{
-          1,
-          static_cast<uint64_t>(wallDelta),
-          static_cast<uint64_t>(cpuDelta),
-      });
+  lockStats->getOutputTiming.add(CpuWallTiming{
+      1,
+      static_cast<uint64_t>(wallDelta),
+      static_cast<uint64_t>(cpuDelta),
+  });
   lockStats->inputBytes += inputBytesDelta;
   lockStats->outputBytes += inputBytesDelta;
   return CpuWallTiming{

@@ -22,10 +22,19 @@ using int128_t = __int128_t;
 
 #if XSIMD_WITH_AVX2
 
+#ifdef _MSC_VER
+// MSVC does not support GCC vector extensions (__attribute__(__vector_size__)).
+// Define __m256si and __m256si_u as aliases for __m256i (the native 256-bit
+// integer SIMD type on MSVC+AVX2). GCC vector arithmetic operators (+, *, >>)
+// on __m256si are replaced by MSVC intrinsic equivalents below.
+using __m256si = __m256i;
+using __m256si_u = __m256i;
+#else
 typedef int32_t __m256si __attribute__((__vector_size__(32), __may_alias__));
 
 typedef int32_t __m256si_u
     __attribute__((__vector_size__(32), __may_alias__, __aligned__(1)));
+#endif
 
 namespace {
 
@@ -53,12 +62,22 @@ inline T* addBytes(T* pointer, int32_t bytes) {
 
 template <typename T>
 inline __m256i as256i(T x) {
+#ifdef _MSC_VER
+  // On MSVC __m256si == __m256i, so x is already __m256i.
+  return x;
+#else
   return reinterpret_cast<__m256i>(x);
+#endif
 }
 
 template <typename T>
 inline __m256si as8x32(T x) {
+#ifdef _MSC_VER
+  // On MSVC __m256si == __m256i, so x is already __m256i.
+  return x;
+#else
   return reinterpret_cast<__m256si>(x);
+#endif
 }
 
 template <uint8_t width, typename T>
@@ -69,6 +88,33 @@ FOLLY_ALWAYS_INLINE __m256i gather8Sparse(
     int32_t i,
     __m256si masks,
     T* result) {
+#ifdef _MSC_VER
+  // On MSVC, __m256si == __m256i. Use intrinsics instead of GCC vector ops.
+  const __m256i kMultipliers =
+      _mm256_set_epi32(2, 4, 8, 16, 32, 64, 128, 256);
+  const __m256i kWidthSplat = _mm256_set1_epi32(width);
+  const __m256i vBitOffset = _mm256_set1_epi32(bitOffset);
+
+  const __m256i rowsVec =
+      _mm256_loadu_si256(reinterpret_cast<const __m256i*>(rows + i));
+  __m256i indices = _mm256_add_epi32(
+      _mm256_mullo_epi32(rowsVec, kWidthSplat), vBitOffset);
+
+  __m256i multipliers;
+  if (width % 8 != 0) {
+    const __m256i indices_and_7 =
+        _mm256_and_si256(indices, _mm256_set1_epi32(7));
+    multipliers =
+        _mm256_permutevar8x32_epi32(kMultipliers, indices_and_7);
+  }
+  const __m256i byteIndices = _mm256_srli_epi32(indices, 3);
+  __m256i data = _mm256_i32gather_epi32(
+      reinterpret_cast<const int*>(bits), byteIndices, 1);
+  if (width % 8 != 0) {
+    data = _mm256_srai_epi32(_mm256_mullo_epi32(data, multipliers), 8);
+  }
+  return _mm256_and_si256(data, masks);
+#else
   constexpr __m256si kMultipliers = {256, 128, 64, 32, 16, 8, 4, 2};
   // workaround for:
   // https://github.com/llvm/llvm-project/issues/64819#issuecomment-1684943890
@@ -89,6 +135,7 @@ FOLLY_ALWAYS_INLINE __m256i gather8Sparse(
     data = (data * multipliers) >> 8;
   }
   return as256i(data & masks);
+#endif
 }
 
 template <uint8_t width, typename T>

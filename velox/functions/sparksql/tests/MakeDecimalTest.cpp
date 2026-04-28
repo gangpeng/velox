@@ -65,14 +65,20 @@ TEST_F(MakeDecimalTest, makeDecimal) {
       makeFlatVector<int64_t>({1111, -1112, 9999, 0}, DECIMAL(5, 1)));
   testMakeDecimal(
       makeFlatVector<int64_t>(
-          {11111111, -11112112, 99999999, DecimalUtil::kShortDecimalMax + 1}),
+          {11111111,
+           -11112112,
+           99999999,
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMax + 1)}),
       true,
       makeFlatVector<int128_t>(
           {11111111, -11112112, 99999999, DecimalUtil::kShortDecimalMax + 1},
           DECIMAL(38, 19)));
   testMakeDecimal(
       makeFlatVector<int64_t>(
-          {11111111, -11112112, 99999999, DecimalUtil::kShortDecimalMax + 1}),
+          {11111111,
+           -11112112,
+           99999999,
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMax + 1)}),
       true,
       makeNullableFlatVector<int64_t>(
           {11111111, -11112112, 99999999, std::nullopt}, DECIMAL(18, 0)));
@@ -82,14 +88,17 @@ TEST_F(MakeDecimalTest, makeDecimal) {
               {11111111,
                -11112112,
                99999999,
-               DecimalUtil::kShortDecimalMax + 1}),
+               static_cast<int64_t>(DecimalUtil::kShortDecimalMax + 1)}),
           false,
           makeNullableFlatVector<int64_t>(
               {11111111, -11112112, 99999999, std::nullopt}, DECIMAL(18, 0))),
       "Unscaled value 1000000000000000000 too large for precision 18.");
   testMakeDecimal(
       makeFlatVector<int64_t>(
-          {11111111, -11112112, 99999999, DecimalUtil::kShortDecimalMax + 1}),
+          {11111111,
+           -11112112,
+           99999999,
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMax + 1)}),
       false,
       makeNullableFlatVector<int64_t>(
           {11111111, -11112112, 99999999, std::nullopt}, DECIMAL(18, 0)),

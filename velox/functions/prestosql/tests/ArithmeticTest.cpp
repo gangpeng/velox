@@ -642,8 +642,8 @@ TEST_F(ArithmeticTest, isFinite) {
   EXPECT_EQ(true, isFinite(0.0));
   EXPECT_EQ(false, isFinite(kInf));
   EXPECT_EQ(false, isFinite(-kInf));
-  EXPECT_EQ(false, isFinite(1.0 / 0.0));
-  EXPECT_EQ(false, isFinite(-1.0 / 0.0));
+  EXPECT_EQ(false, isFinite(kInf));
+  EXPECT_EQ(false, isFinite(-kInf));
   EXPECT_EQ(false, isFinite(kNan));
 }
 
@@ -656,8 +656,8 @@ TEST_F(ArithmeticTest, isInfinite) {
   EXPECT_EQ(false, isInfinite(kNan));
   EXPECT_EQ(true, isInfinite(kInf));
   EXPECT_EQ(true, isInfinite(-kInf));
-  EXPECT_EQ(true, isInfinite(1.0 / 0.0));
-  EXPECT_EQ(true, isInfinite(-1.0 / 0.0));
+  EXPECT_EQ(true, isInfinite(kInf));
+  EXPECT_EQ(true, isInfinite(-kInf));
 }
 
 TEST_F(ArithmeticTest, isNan) {
@@ -667,7 +667,6 @@ TEST_F(ArithmeticTest, isNan) {
 
   EXPECT_EQ(false, isNan(0.0));
   EXPECT_EQ(true, isNan(kNan));
-  EXPECT_EQ(true, isNan(0.0 / 0.0));
 }
 
 TEST_F(ArithmeticTest, nan) {

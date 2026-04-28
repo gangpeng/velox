@@ -16,12 +16,11 @@
 
 #include "velox/common/memory/MmapAllocator.h"
 
-#include <sys/mman.h>
-
 #include "velox/common/base/Counters.h"
 #include "velox/common/base/Portability.h"
 #include "velox/common/base/StatsReporter.h"
 #include "velox/common/memory/Memory.h"
+#include "velox/common/memory/SystemMemory.h"
 
 namespace facebook::velox::memory {
 MmapAllocator::MmapAllocator(const Options& options)
@@ -127,16 +126,25 @@ bool MmapAllocator::allocateNonContiguousWithoutRetry(
   if (newMapsNeeded == 0) {
     return true;
   }
+  std::string errorMsg;
   if (ensureEnoughMappedPages(newMapsNeeded)) {
-    markAllMapped(out);
-    return true;
+    if (markAllMapped(out)) {
+      return true;
+    }
+    numMapped_.fetch_sub(newMapsNeeded);
+    errorMsg = fmt::format(
+        "Could not commit enough for {} pages for total allocation "
+        "of {} pages",
+        newMapsNeeded,
+        sizeMix.totalPages);
+  } else {
+    errorMsg = fmt::format(
+        "Could not advise away enough for {} pages for total allocation "
+        "of {} pages",
+        newMapsNeeded,
+        sizeMix.totalPages);
   }
 
-  const std::string errorMsg = fmt::format(
-      "Could not advise away enough for {} pages for total allocation "
-      "of {} pages",
-      newMapsNeeded,
-      sizeMix.totalPages);
   VELOX_MEM_LOG(WARNING) << errorMsg;
   setAllocatorFailureMessage(errorMsg);
   freeNonContiguous(out);
@@ -255,8 +263,8 @@ bool MmapAllocator::allocateContiguousImpl(
       std::lock_guard<std::mutex> l(arenaMutex_);
       managedArenas_->free(allocation.data(), allocation.maxSize());
     } else {
-      if (::munmap(allocation.data(), allocation.maxSize()) < 0) {
-        VELOX_MEM_LOG(ERROR) << "munmap got " << folly::errnoStr(errno)
+      if (!systemMunmap(allocation.data(), allocation.maxSize())) {
+        VELOX_MEM_LOG(ERROR) << "munmap got " << systemMemoryError()
                              << " for " << allocation.toString();
       }
     }
@@ -326,6 +334,7 @@ bool MmapAllocator::allocateContiguousImpl(
   }
 
   void* data;
+  std::string mmapFailureMessage;
   if (testingHasInjectedFailure(InjectedFailure::kMmap)) {
     data = nullptr;
   } else {
@@ -333,22 +342,31 @@ bool MmapAllocator::allocateContiguousImpl(
       std::lock_guard<std::mutex> l(arenaMutex_);
       data = managedArenas_->allocate(AllocationTraits::pageBytes(maxPages));
     } else {
-      data = ::mmap(
-          nullptr,
-          AllocationTraits::pageBytes(maxPages),
-          PROT_READ | PROT_WRITE,
-          MAP_PRIVATE | MAP_ANONYMOUS,
-          -1,
-          0);
+      data = systemMmap(
+          AllocationTraits::pageBytes(maxPages), SystemMmapMode::kReserve);
+      if (data != nullptr &&
+          !systemMmapCommit(data, AllocationTraits::pageBytes(numPages))) {
+        const auto commitError = systemMemoryError();
+        systemMunmap(data, AllocationTraits::pageBytes(maxPages));
+        data = nullptr;
+        mmapFailureMessage = fmt::format(
+            "Mmap commit failed with {} pages use MmapArena false, error {}, Mmap Allocator: {}",
+            numPages,
+            commitError,
+            toString());
+      }
     }
   }
-  if (data == nullptr || data == MAP_FAILED) {
-    const std::string errorMsg = fmt::format(
-        "Mmap failed with {} pages use MmapArena {}, errno {}, Mmap Allocator: {}",
-        numPages,
-        (useMmapArena_ ? "true" : "false"),
-        folly::errnoStr(errno),
-        toString());
+  if (data == nullptr) {
+    auto errorMsg = std::move(mmapFailureMessage);
+    if (errorMsg.empty()) {
+      errorMsg = fmt::format(
+          "Mmap failed with {} pages use MmapArena {}, error {}, Mmap Allocator: {}",
+          numPages,
+          (useMmapArena_ ? "true" : "false"),
+          systemMemoryError(),
+          toString());
+    }
     VELOX_MEM_LOG(ERROR) << errorMsg;
     setAllocatorFailureMessage(errorMsg);
     // If the mmap failed, we have unmapped former 'allocation' and the extra to
@@ -378,8 +396,8 @@ void MmapAllocator::freeContiguousImpl(ContiguousAllocation& allocation) {
     std::lock_guard<std::mutex> l(arenaMutex_);
     managedArenas_->free(allocation.data(), allocation.maxSize());
   } else {
-    if (::munmap(allocation.data(), allocation.maxSize()) < 0) {
-      VELOX_MEM_LOG(ERROR) << "munmap returned " << folly::errnoStr(errno)
+    if (!systemMunmap(allocation.data(), allocation.maxSize())) {
+      VELOX_MEM_LOG(ERROR) << "munmap returned " << systemMemoryError()
                            << " for " << allocation.toString();
     }
   }
@@ -423,6 +441,23 @@ bool MmapAllocator::growContiguousWithoutRetry(
     return false;
   }
 
+  if (!useMmapArena_ &&
+      !systemMmapCommit(
+          static_cast<uint8_t*>(allocation.data()) + allocation.size(),
+          AllocationTraits::pageBytes(increment))) {
+    const std::string errorMsg = fmt::format(
+        "Could not commit enough for {} pages for growing allocation "
+        "of {} pages: {}",
+        increment,
+        allocation.numPages(),
+        systemMemoryError());
+    VELOX_MEM_LOG(WARNING) << errorMsg;
+    setAllocatorFailureMessage(errorMsg);
+    numAllocated_.fetch_sub(increment);
+    numMapped_.fetch_sub(increment);
+    return false;
+  }
+
   numExternalMapped_ += increment;
   allocation.set(
       allocation.data(),
@@ -437,8 +472,7 @@ void* MmapAllocator::allocateBytesWithoutRetry(
   alignmentCheck(bytes, alignment);
 
   if (useMalloc(bytes)) {
-    auto* result = alignment > kMinAlignment ? ::aligned_alloc(alignment, bytes)
-                                             : ::malloc(bytes);
+    auto* result = systemAlignedAlloc(alignment, bytes);
     if (FOLLY_UNLIKELY(result == nullptr)) {
       VELOX_MEM_LOG(ERROR) << "Failed to allocateBytes " << bytes
                            << " bytes with " << alignment << " alignment";
@@ -477,7 +511,7 @@ void* MmapAllocator::allocateBytesWithoutRetry(
 
 void MmapAllocator::freeBytes(void* p, uint64_t bytes) noexcept {
   if (useMalloc(bytes)) {
-    ::free(p); // NOLINT
+    systemAlignedFree(p); // NOLINT
     numMallocBytes_ -= bytes;
     return;
   }
@@ -495,10 +529,13 @@ void MmapAllocator::freeBytes(void* p, uint64_t bytes) noexcept {
   freeContiguous(allocation);
 }
 
-void MmapAllocator::markAllMapped(const Allocation& allocation) {
+bool MmapAllocator::markAllMapped(const Allocation& allocation) {
   for (auto& sizeClass : sizeClasses_) {
-    sizeClass->setAllMapped(allocation, true);
+    if (!sizeClass->setAllMapped(allocation, true)) {
+      return false;
+    }
   }
+  return true;
 }
 
 MachinePageCount MmapAllocator::adviseAway(MachinePageCount target) {
@@ -527,25 +564,21 @@ MmapAllocator::SizeClass::SizeClass(size_t capacity, MachinePageCount unitSize)
       0,
       "Sizeclass {} must have a multiple of 64 capacity",
       unitSize_);
-  void* ptr = mmap(
-      nullptr,
+  void* ptr = systemMmap(
       AllocationTraits::pageBytes(capacity_ * unitSize_),
-      PROT_READ | PROT_WRITE,
-      MAP_PRIVATE | MAP_ANONYMOUS,
-      -1,
-      0);
-  if (ptr == MAP_FAILED || ptr == nullptr) {
+      SystemMmapMode::kReserve);
+  if (ptr == nullptr) {
     VELOX_FAIL(
         "Could not allocate working memory "
         "mmap failed with {} for sizeClass {}",
-        folly::errnoStr(errno),
+        systemMemoryError(),
         unitSize_);
   }
   address_ = reinterpret_cast<uint8_t*>(ptr);
 }
 
 MmapAllocator::SizeClass::~SizeClass() {
-  munmap(address_, byteSize_);
+  systemMunmap(address_, byteSize_);
 }
 ClassPageCount MmapAllocator::SizeClass::checkConsistency(
     ClassPageCount& numMapped,
@@ -712,7 +745,7 @@ uint32_t MmapAllocator::SizeClass::findMappedFreeGroup() {
 
 xsimd::batch<uint64_t> MmapAllocator::SizeClass::mappedFreeBits(int32_t index) {
   return (xsimd::load_unaligned(pageAllocated_.data() + index) ^
-          xsimd::broadcast<uint64_t>(~0UL)) &
+          xsimd::broadcast<uint64_t>(~0ULL)) &
       xsimd::load_unaligned(pageMapped_.data() + index);
 }
 
@@ -812,9 +845,23 @@ bool MmapAllocator::SizeClass::isInRange(uint8_t* ptr) const {
   return false;
 }
 
-void MmapAllocator::SizeClass::setAllMapped(
+bool MmapAllocator::SizeClass::setAllMapped(
     const Allocation& allocation,
     bool value) {
+  if (value) {
+    for (int i = 0; i < allocation.numRuns(); ++i) {
+      Allocation::PageRun run = allocation.runAt(i);
+      if (!isInRange(run.data())) {
+        continue;
+      }
+      if (!systemMmapCommit(
+              run.data(), AllocationTraits::pageBytes(run.numPages()))) {
+        VELOX_MEM_LOG(ERROR)
+            << "Virtual memory commit failed with " << systemMemoryError();
+        return false;
+      }
+    }
+  }
   for (int i = 0; i < allocation.numRuns(); ++i) {
     Allocation::PageRun run = allocation.runAt(i);
     if (!isInRange(run.data())) {
@@ -823,6 +870,7 @@ void MmapAllocator::SizeClass::setAllMapped(
     std::lock_guard<std::mutex> l(mutex_);
     setMappedBits(run, value);
   }
+  return true;
 }
 
 void MmapAllocator::SizeClass::adviseAway(const Allocation& allocation) {
@@ -831,11 +879,9 @@ void MmapAllocator::SizeClass::adviseAway(const Allocation& allocation) {
     if (!isInRange(run.data())) {
       continue;
     }
-    if (::madvise(
-            run.data(),
-            AllocationTraits::pageBytes(run.numPages()),
-            MADV_DONTNEED) < 0) {
-      VELOX_MEM_LOG(ERROR) << "madvise got errno " << folly::errnoStr(errno);
+    if (!systemMmapDecommit(
+            run.data(), AllocationTraits::pageBytes(run.numPages()))) {
+      VELOX_MEM_LOG(ERROR) << "decommit got error " << systemMemoryError();
     } else {
       std::lock_guard<std::mutex> l(mutex_);
       setMappedBits(run, false);
@@ -912,7 +958,9 @@ void MmapAllocator::SizeClass::allocateAny(
   for (int32_t i = 0; i < toAlloc; ++i) {
     const int bit = __builtin_ctzll(freeBits);
     bits::setBit(&pageAllocated_[wordIndex], bit);
-    if (!(pageMapped_[wordIndex] & (1UL << bit))) {
+    // Use a 64-bit mask: on MSVC unsigned long is 32-bit, while each bitmap
+    // word tracks 64 pages.
+    if (!(pageMapped_[wordIndex] & (1ULL << bit))) {
       numUnmapped += unitSize_;
     } else {
       --numMappedFreePages_;

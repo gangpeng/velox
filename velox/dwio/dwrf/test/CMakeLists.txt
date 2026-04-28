@@ -427,6 +427,7 @@ add_test(
 target_link_libraries(
   velox_dwio_dwrf_reader_test
   velox_dwrf_test_utils
+  velox_hive_connector
   velox_vector_test_lib
   velox_link_libs
   Folly::folly
@@ -532,6 +533,7 @@ add_test(velox_dwrf_e2e_reader_test velox_dwrf_e2e_reader_test)
 target_link_libraries(
   velox_dwrf_e2e_reader_test
   velox_dwrf_test_utils
+  velox_hive_connector
   velox_vector_fuzzer
   velox_vector_test_lib
   velox_link_libs

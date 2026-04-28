@@ -126,12 +126,12 @@ struct UniqueValueComparer {
 
 class VectorHasher {
  public:
-  static constexpr uint64_t kUnmappable = ~0UL;
+  static constexpr uint64_t kUnmappable = ~0ULL;
   // Largest range that can be a part of a normalized key. 59 bits,
   // corresponds to 7 byte strings represented as numbers (56 bits of
   // data and 3 of length).
-  static constexpr int64_t kMaxRange = ~0UL >> 5;
-  static constexpr uint64_t kRangeTooLarge = ~0UL;
+  static constexpr int64_t kMaxRange = ~0ULL >> 5;
+  static constexpr uint64_t kRangeTooLarge = ~0ULL;
   // Stop counting distinct values after this many and revert to regular hash.
   static constexpr int32_t kMaxDistinct = 100'000;
 
@@ -369,7 +369,7 @@ class VectorHasher {
   static inline int64_t stringAsNumber(const char* data, int32_t size) {
     int64_t word =
         bits::loadPartialWord(reinterpret_cast<const uint8_t*>(data), size);
-    return size == 0 ? word : word + (1L << (size * 8));
+    return size == 0 ? word : word + (1LL << (size * 8));
   }
 
   template <typename T>

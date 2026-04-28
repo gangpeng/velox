@@ -41,8 +41,8 @@ struct hash<facebook::velox::TypeKind> {
 namespace facebook::velox {
 namespace {
 bool isColumnNameRequiringEscaping(const std::string& name) {
-  static const std::string re("^[a-zA-Z_][a-zA-Z0-9_]*$");
-  return !RE2::FullMatch(name, re);
+  static const re2::RE2 pattern("^[a-zA-Z_][a-zA-Z0-9_]*$");
+  return !RE2::FullMatch(name, pattern);
 }
 
 const auto& typeKindNames() {
@@ -960,6 +960,15 @@ RowTypePtr ROW(std::vector<std::string> names, std::vector<TypePtr> types) {
   return TypeFactory<TypeKind::ROW>::create(std::move(names), std::move(types));
 }
 
+#ifdef _MSC_VER
+RowTypePtr ROW(
+    std::initializer_list<std::string> names,
+    std::initializer_list<TypePtr> types) {
+  return ROW(
+      std::vector<std::string>(names), std::vector<TypePtr>(types));
+}
+#endif
+
 RowTypePtr ROW(std::vector<std::string> names, const TypePtr& childType) {
   const auto cnt = names.size();
   return ROW(std::move(names), std::vector(cnt, childType));
@@ -990,13 +999,13 @@ RowTypePtr ROW(
   return TypeFactory<TypeKind::ROW>::create(std::move(names), std::move(types));
 }
 
-RowTypePtr ROW(std::vector<TypePtr>&& types) {
+RowTypePtr ROW(std::vector<TypePtr> types) {
   std::vector<std::string> names(types.size(), "");
   return ROW(std::move(names), std::move(types));
 }
 
 std::shared_ptr<const FunctionType> FUNCTION(
-    std::vector<TypePtr>&& argumentTypes,
+    std::vector<TypePtr> argumentTypes,
     TypePtr returnType) {
   return std::make_shared<const FunctionType>(
       std::move(argumentTypes), std::move(returnType));
@@ -1008,7 +1017,13 @@ std::shared_ptr<const FunctionType> FUNCTION(
   }
 
 VELOX_DEFINE_SCALAR_ACCESSOR(INTEGER);
+#ifdef _MSC_VER
+std::shared_ptr<const ScalarType<TypeKind::BOOLEAN>> BOOLEAN_() {
+  return ScalarType<TypeKind::BOOLEAN>::create();
+}
+#else
 VELOX_DEFINE_SCALAR_ACCESSOR(BOOLEAN);
+#endif
 VELOX_DEFINE_SCALAR_ACCESSOR(TINYINT);
 VELOX_DEFINE_SCALAR_ACCESSOR(SMALLINT);
 VELOX_DEFINE_SCALAR_ACCESSOR(BIGINT);
@@ -1169,7 +1184,8 @@ std::unordered_set<std::string> getCustomTypeNames() {
 
 bool unregisterCustomType(const std::string& name) {
   auto uppercaseName = boost::algorithm::to_upper_copy(name);
-  return typeFactories().erase(uppercaseName) == 1;
+  bool removed = typeFactories().erase(uppercaseName) == 1;
+  return removed;
 }
 
 const CustomTypeFactory* FOLLY_NULLABLE
@@ -1261,19 +1277,24 @@ void toTypeSql(const TypePtr& type, std::ostream& out) {
 std::string IntervalDayTimeType::valueToString(int64_t value) const {
   static const char* kIntervalFormat = "%s%lld %02d:%02d:%02d.%03d";
 
-  int128_t remainMillis = value;
+  // Use uint64_t for the absolute value to safely handle INT64_MIN,
+  // whose negation overflows int64_t.
   std::string sign{};
-  if (remainMillis < 0) {
+  uint64_t remainMillis;
+  if (value < 0) {
     sign = "-";
-    remainMillis = -remainMillis;
+    // Cast to unsigned before negating to avoid signed overflow on INT64_MIN.
+    remainMillis = -static_cast<uint64_t>(value);
+  } else {
+    remainMillis = static_cast<uint64_t>(value);
   }
-  const int64_t days = remainMillis / kMillisInDay;
+  const uint64_t days = remainMillis / kMillisInDay;
   remainMillis -= days * kMillisInDay;
-  const int64_t hours = remainMillis / kMillisInHour;
+  const int hours = static_cast<int>(remainMillis / kMillisInHour);
   remainMillis -= hours * kMillisInHour;
-  const int64_t minutes = remainMillis / kMillisInMinute;
+  const int minutes = static_cast<int>(remainMillis / kMillisInMinute);
   remainMillis -= minutes * kMillisInMinute;
-  const int64_t seconds = remainMillis / kMillisInSecond;
+  const int seconds = static_cast<int>(remainMillis / kMillisInSecond);
   remainMillis -= seconds * kMillisInSecond;
   char buf[64];
   snprintf(
@@ -1281,11 +1302,11 @@ std::string IntervalDayTimeType::valueToString(int64_t value) const {
       sizeof(buf),
       kIntervalFormat,
       sign.c_str(),
-      days,
+      static_cast<long long>(days),
       hours,
       minutes,
       seconds,
-      remainMillis);
+      static_cast<int>(remainMillis));
 
   return buf;
 }

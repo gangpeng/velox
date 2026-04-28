@@ -923,7 +923,7 @@ TEST_P(AsyncDataCacheTest, invalidSsdPath) {
   VELOX_ASSERT_THROW(
       SsdCache(config),
       fmt::format(
-          "Ssd path '{}' does not start with '/' that points to local file system.",
+          "Ssd path '{}' does not start with '/' or a drive letter that points to local file system.",
           testPath));
 }
 

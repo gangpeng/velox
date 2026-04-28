@@ -277,7 +277,7 @@ class ColumnStats : public AbstractColumnStats {
   }
 
   int64_t getIntegerValue(const T& value) {
-    return value;
+    return static_cast<int64_t>(value);
   }
 
   std::unique_ptr<Filter> makeRangeFilter(const FilterSpec& filterSpec) {

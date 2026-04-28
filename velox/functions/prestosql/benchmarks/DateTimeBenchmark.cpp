@@ -15,6 +15,12 @@
  */
 #include <folly/Benchmark.h>
 #include <folly/init/Init.h>
+
+#ifdef _WIN32
+#include <time.h>
+#include <folly/portability/Time.h>
+#endif
+
 #include "velox/expression/VectorFunction.h"
 #include "velox/functions/lib/benchmarks/FunctionBenchmarkBase.h"
 #include "velox/functions/prestosql/registration/RegistrationFunctions.h"

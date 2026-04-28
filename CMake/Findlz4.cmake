@@ -34,8 +34,19 @@ find_package_handle_standard_args(lz4 DEFAULT_MSG LZ4_LIBRARY LZ4_INCLUDE_DIR)
 
 mark_as_advanced(LZ4_LIBRARY LZ4_INCLUDE_DIR)
 
-get_filename_component(liblz4_ext ${LZ4_LIBRARY} EXT)
-if(liblz4_ext STREQUAL ".a")
+# LZ4_LIBRARY may be a generator-expression list (optimized;path;debug;path)
+# produced by select_library_configurations. Use the release library for type
+# detection and the imported target configuration properties.
+if(LZ4_LIBRARY_RELEASE)
+  set(_lz4_lib_for_type "${LZ4_LIBRARY_RELEASE}")
+elseif(LZ4_LIBRARY_DEBUG)
+  set(_lz4_lib_for_type "${LZ4_LIBRARY_DEBUG}")
+else()
+  set(_lz4_lib_for_type "${LZ4_LIBRARY}")
+endif()
+
+get_filename_component(liblz4_ext ${_lz4_lib_for_type} EXT)
+if(liblz4_ext STREQUAL ".a" OR liblz4_ext STREQUAL ".lib")
   set(liblz4_type STATIC)
 else()
   set(liblz4_type SHARED)
@@ -46,6 +57,13 @@ if(NOT TARGET lz4::lz4)
   set_target_properties(lz4::lz4 PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${LZ4_INCLUDE_DIR}")
   set_target_properties(
     lz4::lz4
-    PROPERTIES IMPORTED_LINK_INTERFACE_LANGUAGES "C" IMPORTED_LOCATION "${LZ4_LIBRARIES}"
+    PROPERTIES IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+               IMPORTED_LOCATION "${_lz4_lib_for_type}"
   )
+  if(LZ4_LIBRARY_RELEASE)
+    set_target_properties(lz4::lz4 PROPERTIES IMPORTED_LOCATION_RELEASE "${LZ4_LIBRARY_RELEASE}")
+  endif()
+  if(LZ4_LIBRARY_DEBUG)
+    set_target_properties(lz4::lz4 PROPERTIES IMPORTED_LOCATION_DEBUG "${LZ4_LIBRARY_DEBUG}")
+  endif()
 endif()

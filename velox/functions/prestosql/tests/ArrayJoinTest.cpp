@@ -121,6 +121,9 @@ TEST_F(ArrayJoinTest, boolTest) {
 }
 
 TEST_F(ArrayJoinTest, timestampTest) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   setLegacyCast(false);
   testArrayJoinNoReplacement<Timestamp>(
       {Timestamp{333183, 0}, std::nullopt, Timestamp{2925183, 0}},

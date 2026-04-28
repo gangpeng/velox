@@ -516,11 +516,13 @@ TEST_F(DecimalArithmeticTest, round) {
   // Min and max short decimals.
   testDecimalExpr<TypeKind::BIGINT>(
       {makeFlatVector<int64_t>(
-          {DecimalUtil::kShortDecimalMax, DecimalUtil::kShortDecimalMin},
+          {static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
           DECIMAL(15, 0))},
       "round(c0)",
       {makeFlatVector<int64_t>(
-          {DecimalUtil::kShortDecimalMax, DecimalUtil::kShortDecimalMin},
+          {static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
           DECIMAL(15, 0))});
 
   // Min and max long decimals.
@@ -664,10 +666,18 @@ TEST_F(DecimalArithmeticTest, floorAndCeil) {
         inType, outType, "floor(c0)");
     auto testCeil = makeDecimalExprTester<int64_t, TypeKind::BIGINT>(
         inType, outType, "ceil(c0)");
-    testFloor(DecimalUtil::kShortDecimalMax, DecimalUtil::kShortDecimalMax);
-    testFloor(DecimalUtil::kShortDecimalMin, DecimalUtil::kShortDecimalMin);
-    testCeil(DecimalUtil::kShortDecimalMax, DecimalUtil::kShortDecimalMax);
-    testCeil(DecimalUtil::kShortDecimalMin, DecimalUtil::kShortDecimalMin);
+    testFloor(
+        static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+        static_cast<int64_t>(DecimalUtil::kShortDecimalMax));
+    testFloor(
+        static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
+        static_cast<int64_t>(DecimalUtil::kShortDecimalMin));
+    testCeil(
+        static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+        static_cast<int64_t>(DecimalUtil::kShortDecimalMax));
+    testCeil(
+        static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
+        static_cast<int64_t>(DecimalUtil::kShortDecimalMin));
   }
 
   // Long DECIMAL(20,2) -> Long DECIMAL(19,0).
@@ -783,11 +793,13 @@ TEST_F(DecimalArithmeticTest, truncate) {
   // Min and max short decimals.
   testDecimalExpr<TypeKind::BIGINT>(
       {makeFlatVector<int64_t>(
-          {DecimalUtil::kShortDecimalMax, DecimalUtil::kShortDecimalMin},
+          {static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
           DECIMAL(15, 0))},
       "truncate(c0)",
       {makeFlatVector<int64_t>(
-          {DecimalUtil::kShortDecimalMax, DecimalUtil::kShortDecimalMin},
+          {static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
           DECIMAL(15, 0))});
 
   // Min and max long decimals.
@@ -868,18 +880,19 @@ TEST_F(DecimalArithmeticTest, abs) {
   // Min and max short decimals.
   testDecimalExpr<TypeKind::BIGINT>(
       {makeFlatVector(
-          std::vector<int64_t>{DecimalUtil::kShortDecimalMax}, DECIMAL(15, 0))},
+          std::vector<int64_t>{static_cast<int64_t>(DecimalUtil::kShortDecimalMax)},
+          DECIMAL(15, 0))},
       "abs(c0)",
       {makeFlatVector(
-          std::vector<int64_t>{DecimalUtil::kShortDecimalMin},
+          std::vector<int64_t>{static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
           DECIMAL(15, 0))});
   testDecimalExpr<TypeKind::BIGINT>(
       {makeFlatVector(
-          std::vector<int64_t>{DecimalUtil::kShortDecimalMax},
+          std::vector<int64_t>{static_cast<int64_t>(DecimalUtil::kShortDecimalMax)},
           DECIMAL(15, 15))},
       "abs(c0)",
       {makeFlatVector(
-          std::vector<int64_t>{DecimalUtil::kShortDecimalMin},
+          std::vector<int64_t>{static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
           DECIMAL(15, 15))});
 
   // Min and max long decimals.

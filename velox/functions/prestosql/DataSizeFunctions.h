@@ -23,20 +23,22 @@
 
 namespace facebook::velox::functions {
 
-enum class Unit : int128_t {
-  BYTE = 1,
-  KILOBYTE = int128_t(1) << 10,
-  MEGABYTE = int128_t(1) << 20,
-  GIGABYTE = int128_t(1) << 30,
-  TERABYTE = int128_t(1) << 40,
-  PETABYTE = int128_t(1) << 50,
-  EXABYTE = int128_t(1) << 60,
-  ZETTABYTE = int128_t(1) << 70,
-  YOTTABYTE = int128_t(1) << 80
-};
+// On MSVC, int128_t is absl::int128 (a class) and cannot be used as enum
+// underlying type. Use constexpr int128_t constants instead.
+namespace Unit {
+static const int128_t BYTE = 1;
+static const int128_t KILOBYTE = int128_t(1) << 10;
+static const int128_t MEGABYTE = int128_t(1) << 20;
+static const int128_t GIGABYTE = int128_t(1) << 30;
+static const int128_t TERABYTE = int128_t(1) << 40;
+static const int128_t PETABYTE = int128_t(1) << 50;
+static const int128_t EXABYTE = int128_t(1) << 60;
+static const int128_t ZETTABYTE = int128_t(1) << 70;
+static const int128_t YOTTABYTE = int128_t(1) << 80;
+} // namespace Unit
 
-inline Unit parseUnit(std::string_view dataSize, size_t valueLength) {
-  static const std::map<std::string_view, Unit> unitMap = {
+inline int128_t parseUnit(std::string_view dataSize, size_t valueLength) {
+  static const std::map<std::string_view, int128_t> unitMap = {
       {"B", Unit::BYTE},
       {"kB", Unit::KILOBYTE},
       {"MB", Unit::MEGABYTE},
@@ -73,10 +75,9 @@ inline int128_t getDecimal(std::string_view dataSize) {
   }
   VELOX_USER_CHECK_GT(valueLength, 0, "Invalid data size: '{}'", dataSize);
   double value = parseValue(dataSize, valueLength);
-  Unit unit = parseUnit(dataSize, valueLength);
+  int128_t factor = parseUnit(dataSize, valueLength);
 
-  int128_t factor = static_cast<int128_t>(unit);
-  int128_t scaledValue = static_cast<int128_t>(value * factor);
+  int128_t scaledValue = static_cast<int128_t>(value * static_cast<double>(factor));
 
   // Ensure the result is within a valid range.
   try {

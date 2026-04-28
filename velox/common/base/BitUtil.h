@@ -17,6 +17,8 @@
 #pragma once
 
 #include "velox/common/base/Exceptions.h"
+// Portability.h provides MSVC shims for GCC builtins and 128-bit integer types.
+#include "velox/common/base/Portability.h"
 
 #include <folly/CPortability.h>
 
@@ -134,7 +136,10 @@ constexpr inline T divRoundUp(T value, U factor) {
 }
 
 constexpr inline uint64_t lowMask(int32_t bits) {
-  return (1UL << bits) - 1;
+  // Use 1ULL (unsigned long long, always 64-bit) so that shifts up to 63
+  // are well-defined on all platforms, including Windows where
+  // unsigned long is 32 bits and (1UL << 32) would be undefined behavior.
+  return (uint64_t(1) << bits) - 1;
 }
 
 constexpr inline uint64_t highMask(int32_t bits) {
@@ -250,7 +255,7 @@ forEachWord(int32_t begin, int32_t end, PartialWordFunc partialWordFunc) {
   int32_t firstIndex = begin / 64;
   int32_t lastIndex = (roundUp(end, 64) - 64) / 64;
   for (auto index = firstIndex; index <= lastIndex; ++index) {
-    uint64_t mask = ~0UL;
+    uint64_t mask = ~0ULL;
     if (index == firstIndex && begin != firstIndex * 64) {
       // We do not start at 64 bit boundary, and off the bits below start.
       mask = highMask((firstIndex + 1) * 64 - begin);
@@ -279,7 +284,7 @@ void forBatches(
     int32_t begin,
     int32_t end,
     Callable func) {
-  constexpr int64_t unitMask = kWidth == 64 ? ~0UL : lowMask(kWidth);
+  constexpr int64_t unitMask = kWidth == 64 ? ~0ULL : lowMask(kWidth);
   static_assert(kWidth <= 64 && 64 % kWidth == 0);
   bits::forEachWord(begin, end, [&](auto index, uint64_t mask) {
     uint64_t active = bits[index] & mask;
@@ -743,7 +748,7 @@ inline int32_t countLeadingZeros(T word) {
   if constexpr (std::is_same_v<T, uint64_t>) {
     return __builtin_clzll(word);
   } else {
-    uint64_t hi = word >> 64;
+    uint64_t hi = static_cast<uint64_t>(word >> 64);
     uint64_t lo = static_cast<uint64_t>(word);
     return (hi == 0) ? 64 + __builtin_clzll(lo) : __builtin_clzll(hi);
   }
@@ -844,7 +849,7 @@ inline T loadBits(const uint64_t* source, uint64_t bitOffset, uint8_t numBits) {
     return word >> bit;
   }
   uint8_t lastByte = reinterpret_cast<const uint8_t*>(address)[sizeof(T)];
-  uint64_t lastBits = static_cast<T>(lastByte) << (kBitSize - bit);
+  T lastBits = static_cast<T>(lastByte) << (kBitSize - bit);
   return (word >> bit) | lastBits;
 }
 
@@ -860,7 +865,7 @@ storeBits(uint64_t* target, uint64_t offset, uint64_t word, uint8_t numBits) {
   T* address =
       reinterpret_cast<T*>(reinterpret_cast<uint64_t>(target) + (offset / 8));
   auto bitOffset = offset & 7;
-  uint64_t mask = (numBits == 64 ? ~0UL : ((1UL << numBits) - 1)) << bitOffset;
+  uint64_t mask = (numBits == 64 ? ~0ULL : ((1ULL << numBits) - 1)) << bitOffset;
   *address = (*address & ~mask) | (mask & (word << bitOffset));
   if (numBits + bitOffset > kBitSize) {
     uint8_t* lastByteAddress = reinterpret_cast<uint8_t*>(address) + sizeof(T);
@@ -1002,16 +1007,23 @@ inline void padToAlignment(
 /// Returns value with the order of the bytes reversed; for example, 0xaabb
 /// becomes 0xbbaa. Byte here always means exactly 8 bits.
 inline __int128_t builtin_bswap128(__int128_t value) {
-#if defined __has_builtin
+#ifdef _MSC_VER
+  // On MSVC, use two _byteswap_uint64 calls (via __builtin_bswap64 shim).
+  uint64_t hi = static_cast<uint64_t>(absl::Int128High64(value));
+  uint64_t lo = absl::Int128Low64(value);
+  return absl::MakeInt128(
+      static_cast<int64_t>(__builtin_bswap64(lo)),
+      __builtin_bswap64(hi));
+#elif defined __has_builtin
 #if __has_builtin(__builtin_bswap128)
 #define VELOX_HAS_BUILTIN_BSWAP_INT128 1
   return __builtin_bswap128(value);
 #endif
 #endif
-#if not VELOX_HAS_BUILTIN_BSWAP_INT128
+#if not defined(_MSC_VER) && not defined(VELOX_HAS_BUILTIN_BSWAP_INT128)
   return (static_cast<__uint128_t>(__builtin_bswap64(value)) << 64) |
       __builtin_bswap64(value >> 64);
-#else
+#elif defined(VELOX_HAS_BUILTIN_BSWAP_INT128)
 #undef VELOX_HAS_BUILTIN_BSWAP_INT128
 #endif
 }

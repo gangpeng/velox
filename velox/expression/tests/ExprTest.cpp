@@ -281,31 +281,51 @@ class ExprTest : public testing::Test, public VectorTestBase {
 
   std::string extractFromErrorContext(
       const std::string& context,
+      const char* key,
+      const char* nextKey) {
+    auto startPos = context.find(key);
+    VELOX_CHECK(startPos != std::string::npos);
+    startPos += strlen(key);
+    auto endPos = context.find(nextKey, startPos);
+    VELOX_CHECK(endPos != std::string::npos, context);
+    return context.substr(startPos, endPos - startPos);
+  }
+
+  std::string extractFinalPathFromErrorContext(
+      const std::string& context,
       const char* key) {
     auto startPos = context.find(key);
     VELOX_CHECK(startPos != std::string::npos);
     startPos += strlen(key);
-    auto endPos = context.find(".", startPos);
-    VELOX_CHECK(endPos != std::string::npos, context);
-    return context.substr(startPos, endPos - startPos);
+    auto path = context.substr(startPos);
+
+    // The exception context terminates the final path with ". ". Don't split
+    // at the first '.', because Windows temp directories created by
+    // GetTempFileName commonly end with ".tmp".
+    if (path.size() >= 2 && path.compare(path.size() - 2, 2, ". ") == 0) {
+      path.resize(path.size() - 2);
+    }
+    return path;
   }
 
   /// Extract input path from the 'context':
   ///     "<expression>. Input data: <input path>. ..."
   std::string extractInputPath(const std::string& context) {
-    return extractFromErrorContext(context, ". Input data: ");
+    return extractFromErrorContext(
+        context, ". Input data: ", ". SQL expression: ");
   }
 
   /// Extract expression sql's path from the 'context':
   ///     "... <input path>. SQL expression: <sql path>"
   std::string extractSqlPath(const std::string& context) {
-    return extractFromErrorContext(context, ". SQL expression: ");
+    return extractFromErrorContext(
+        context, ". SQL expression: ", ". All SQL expressions: ");
   }
 
   /// Extract all expressions sqls' path from the 'context':
   ///     "... <sql path>.  All SQL expressions: <all sql path>"
   std::string extractAllExprSqlPath(const std::string& context) {
-    return extractFromErrorContext(context, ". All SQL expressions: ");
+    return extractFinalPathFromErrorContext(context, ". All SQL expressions: ");
   }
 
   VectorPtr restoreVector(const std::string& path) {
@@ -5193,6 +5213,9 @@ TEST_F(ExprTest, disabledeferredLazyLoading) {
 }
 
 TEST_F(ExprTest, evaluateConstantExpression) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database not available on Windows";
+#endif
   auto eval = [&](const std::string& sql) {
     auto expr = parseExpression(sql, ROW({"a"}, {BIGINT()}));
     return exec::tryEvaluateConstantExpression(expr, pool(), queryCtx_);

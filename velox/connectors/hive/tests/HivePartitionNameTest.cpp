@@ -82,6 +82,9 @@ class HivePartitionNameTest : public ::testing::Test,
 };
 
 TEST_F(HivePartitionNameTest, partitionName) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   {
     RowVectorPtr input = makeRowVector(
         {"flat_bool_col",
@@ -176,6 +179,9 @@ TEST_F(HivePartitionNameTest, partitionNameForNull) {
 }
 
 TEST_F(HivePartitionNameTest, timestampPartitionValueFormatting) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   // Test timestamp partition value formatting to match Presto's
   // java.sql.Timestamp.toString() behavior: removes trailing zeros but keeps at
   // least one decimal place

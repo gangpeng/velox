@@ -154,7 +154,7 @@ TEST_F(AverageAggregationTest, avgAllNulls) {
 }
 
 TEST_F(AverageAggregationTest, avgDecimal) {
-  const int64_t kRescale = DecimalUtil::kPowersOfTen[4];
+  const int64_t kRescale = static_cast<int64_t>(DecimalUtil::kPowersOfTen[4]);
   // Short decimal aggregation.
   auto shortDecimal = makeNullableFlatVector<int64_t>(
       {1'000, 2'000, 3'000, 4'000, 5'000, std::nullopt}, DECIMAL(12, 1));
@@ -270,7 +270,7 @@ TEST_F(AverageAggregationTest, avgDecimal) {
 }
 
 TEST_F(AverageAggregationTest, avgDecimalWithMultipleRowVectors) {
-  const int64_t kRescale = DecimalUtil::kPowersOfTen[4];
+  const int64_t kRescale = static_cast<int64_t>(DecimalUtil::kPowersOfTen[4]);
   auto inputRows = {
       makeRowVector({makeFlatVector<int128_t>({100, 200}, DECIMAL(28, 2))}),
       makeRowVector({makeFlatVector<int128_t>({300, 400}, DECIMAL(28, 2))}),

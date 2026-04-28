@@ -176,7 +176,7 @@ TEST(DecimalTest, toString) {
   EXPECT_EQ(
       std::to_string(HugeInt::build(0xFFFFFFFFFFFFFFFFull, 0)),
       "-18446744073709551616");
-  constexpr int128_t kMax =
+  const int128_t kMax =
       HugeInt::build(0x7FFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull);
   EXPECT_EQ(std::to_string(kMax), "170141183460469231731687303715884105727");
   EXPECT_EQ(
@@ -257,19 +257,19 @@ TEST(DecimalTest, longDecimalSerDe) {
   char data[100];
   HugeInt::serialize(DecimalUtil::kLongDecimalMin, data);
   auto deserializedData = HugeInt::deserialize(data);
-  ASSERT_EQ(deserializedData, DecimalUtil::kLongDecimalMin);
+  ASSERT_TRUE(deserializedData == DecimalUtil::kLongDecimalMin);
 
   HugeInt::serialize(DecimalUtil::kLongDecimalMax, data);
   deserializedData = HugeInt::deserialize(data);
-  ASSERT_EQ(deserializedData, DecimalUtil::kLongDecimalMax);
+  ASSERT_TRUE(deserializedData == DecimalUtil::kLongDecimalMax);
 
-  HugeInt::serialize(-1, data);
+  HugeInt::serialize(int128_t(-1), data);
   deserializedData = HugeInt::deserialize(data);
-  ASSERT_EQ(deserializedData, -1);
+  ASSERT_TRUE(deserializedData == int128_t(-1));
 
-  HugeInt::serialize(10, data);
+  HugeInt::serialize(int128_t(10), data);
   deserializedData = HugeInt::deserialize(data);
-  ASSERT_EQ(deserializedData, 10);
+  ASSERT_TRUE(deserializedData == int128_t(10));
 }
 
 // The result can be obtained by
@@ -317,10 +317,12 @@ TEST(DecimalTest, valueInPrecisionRange) {
   ASSERT_FALSE(DecimalUtil::valueInPrecisionRange<int64_t>(1234, 3));
   ASSERT_TRUE(
       DecimalUtil::valueInPrecisionRange<int64_t>(
-          DecimalUtil::kShortDecimalMax, ShortDecimalType::kMaxPrecision));
+          static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+          ShortDecimalType::kMaxPrecision));
   ASSERT_FALSE(
       DecimalUtil::valueInPrecisionRange<int64_t>(
-          DecimalUtil::kShortDecimalMax + 1, ShortDecimalType::kMaxPrecision));
+          static_cast<int64_t>(DecimalUtil::kShortDecimalMax + 1),
+          ShortDecimalType::kMaxPrecision));
   ASSERT_TRUE(
       DecimalUtil::valueInPrecisionRange<int128_t>(
           DecimalUtil::kLongDecimalMax, LongDecimalType::kMaxPrecision));
@@ -375,7 +377,7 @@ TEST(DecimalAggregateTest, adjustSumForOverflow) {
   accumulator.add(DecimalUtil::kLongDecimalMax);
   accumulator.add(DecimalUtil::kLongDecimalMax);
   accumulator.add(DecimalUtil::kLongDecimalMin);
-  EXPECT_EQ(accumulator.adjustedSum(), DecimalUtil::kLongDecimalMax);
+  EXPECT_TRUE(accumulator.adjustedSum() == DecimalUtil::kLongDecimalMax);
 
   accumulator.reset();
   // kLongDecimalMin + kLongDecimalMin will trigger one downward overflow, and
@@ -385,7 +387,7 @@ TEST(DecimalAggregateTest, adjustSumForOverflow) {
   accumulator.add(DecimalUtil::kLongDecimalMin);
   accumulator.add(DecimalUtil::kLongDecimalMin);
   accumulator.add(DecimalUtil::kLongDecimalMax);
-  EXPECT_EQ(accumulator.adjustedSum(), DecimalUtil::kLongDecimalMin);
+  EXPECT_TRUE(accumulator.adjustedSum() == DecimalUtil::kLongDecimalMin);
 
   accumulator.reset();
   // These inputs will eventually trigger an upward overflow, and
@@ -529,32 +531,44 @@ TEST(DecimalTest, rescaleReal) {
   assertRescaleReal(27867.645, DECIMAL(18, 2), 2786764);
 
   // Test for overflows.
-  std::vector<float> invalidInputs = {
-      std::numeric_limits<float>::max(),
-      std::numeric_limits<float>::lowest(),
-      9999999999999999999999.99,
+  assertRescaleRealFail(
+      std::numeric_limits<float>::max(), DECIMAL(38, 0), "Result overflows.");
+  assertRescaleRealFail(
+      std::numeric_limits<float>::lowest(), DECIMAL(38, 0), "Result overflows.");
+  assertRescaleRealFail(
+      9999999999999999999999.99f, DECIMAL(10, 2), "Result overflows.");
+  assertRescaleRealFail(
       static_cast<float>(
           static_cast<int128_t>(std::numeric_limits<int64_t>::max()) + 1),
+      DECIMAL(18, 0),
+#ifdef _MSC_VER
+      // MSVC long double == double: the float boundary check behaves
+      // differently, causing a precision error instead of overflow.
+      "Result cannot fit in the given precision 18.");
+#else
+      "Result overflows.");
+#endif
+  assertRescaleRealFail(
       static_cast<float>(
           static_cast<int128_t>(std::numeric_limits<int64_t>::min()) - 1),
+      DECIMAL(18, 0),
+      "Result overflows.");
+  assertRescaleRealFail(
       static_cast<float>(DecimalUtil::kShortDecimalMax),
+      DECIMAL(10, 2),
+      "Result overflows.");
+  assertRescaleRealFail(
       static_cast<float>(DecimalUtil::kShortDecimalMin),
+      DECIMAL(10, 2),
+      "Result overflows.");
+  assertRescaleRealFail(
       static_cast<float>(DecimalUtil::kLongDecimalMax),
-      static_cast<float>(DecimalUtil::kLongDecimalMin),
-  };
-  std::vector<TypePtr> toTypes = {
-      DECIMAL(38, 0),
-      DECIMAL(38, 0),
-      DECIMAL(10, 2),
-      DECIMAL(18, 0),
-      DECIMAL(18, 0),
-      DECIMAL(10, 2),
-      DECIMAL(10, 2),
       DECIMAL(20, 2),
-      DECIMAL(20, 2)};
-  for (int32_t i = 0; i < invalidInputs.size(); i++) {
-    assertRescaleRealFail(invalidInputs[i], toTypes[i], "Result overflows.");
-  }
+      "Result overflows.");
+  assertRescaleRealFail(
+      static_cast<float>(DecimalUtil::kLongDecimalMin),
+      DECIMAL(20, 2),
+      "Result overflows.");
 
   assertRescaleRealFail(
       99999.99, DECIMAL(6, 4), "Result cannot fit in the given precision 6.");
@@ -579,9 +593,17 @@ TEST(DecimalTest, castToString) {
   testcastToString<int64_t>(-12, 5, 5, 8, "-0.00012");
   testcastToString<int64_t>(-12, 5, 5, 8, "-0.00012");
   testcastToString<int64_t>(
-      DecimalUtil::kShortDecimalMax, 18, 0, 19, std::string(18, '9'));
+      static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+      18,
+      0,
+      19,
+      std::string(18, '9'));
   testcastToString<int64_t>(
-      DecimalUtil::kShortDecimalMin, 18, 0, 19, "-" + std::string(18, '9'));
+      static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
+      18,
+      0,
+      19,
+      "-" + std::string(18, '9'));
 
   testcastToString<int128_t>(
       HugeInt::parse("-18446744073709551616"),
@@ -724,6 +746,8 @@ TEST(DecimalTest, castFromString) {
 TEST(DecimalTest, castFromStringError) {
   testCastFromString<int128_t>(
       std::string(280, '9'), 38, 0, "Value too large.");
+  testCastFromString<int128_t>(
+      "1" + std::string(38, '0'), 38, 0, "Value too large.");
 
   // Overflows when parsing fractional digits.
   const std::string fractionOverflow = std::string(36, '9') + '.' + "23456";

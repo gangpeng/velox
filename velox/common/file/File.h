@@ -26,7 +26,9 @@
 
 #pragma once
 
+#ifndef _WIN32
 #include <fcntl.h>
+#endif
 #include <atomic>
 #include <cstdint>
 #include <cstdio>
@@ -387,7 +389,7 @@ class LocalReadFile final : public ReadFile {
   folly::Executor* const executor_;
   std::string path_;
   int32_t fd_;
-  long size_;
+  uint64_t size_{0};
 };
 
 class LocalWriteFile final : public WriteFile {

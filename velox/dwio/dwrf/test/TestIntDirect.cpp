@@ -216,7 +216,7 @@ TEST_F(DirectTest, vIntSignedLong) {
   testInts<int64_t, true, true>([&]() -> int64_t {
     auto mod = ++count % 33;
     auto numBytes = mod < 9 ? 1 : mod < 14 ? 2 : mod < 17 ? 3 : mod % 9;
-    auto value = folly::Random::rand64(rng) & ((1UL << (7 * numBytes)) - 1);
+    auto value = folly::Random::rand64(rng) & ((1ULL << (7 * numBytes)) - 1);
     return folly::Random::rand32(rng) & 1 ? -value : value;
   });
 }
@@ -230,7 +230,7 @@ TEST_F(DirectTest, vIntUnsignedLong) {
   testInts<int64_t, false, true>([&]() -> int64_t {
     auto mod = ++count % 33;
     auto numBytes = mod < 9 ? 1 : mod < 14 ? 2 : mod < 17 ? 3 : mod % 9;
-    return folly::Random::rand64(rng) & ((1UL << (7 * numBytes)) - 1);
+    return folly::Random::rand64(rng) & ((1ULL << (7 * numBytes)) - 1);
   });
 }
 

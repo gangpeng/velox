@@ -25,5 +25,5 @@ target_link_libraries(
   GTest::gmock
   glog::glog
   gflags::gflags
-  pthread
+  $<$<NOT:$<BOOL:${MSVC}>>:pthread>
 )

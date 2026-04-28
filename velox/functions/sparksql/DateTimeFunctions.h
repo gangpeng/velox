@@ -638,7 +638,9 @@ struct DateAddFunction {
       out_type<Date>& result,
       const arg_type<Date>& date,
       const TInput& value) {
-    __builtin_add_overflow(date, value, &result);
+    int32_t tmp;
+    __builtin_add_overflow(date, static_cast<int32_t>(value), &tmp);
+    result = tmp;
   }
 };
 
@@ -651,7 +653,9 @@ struct DateSubFunction {
       out_type<Date>& result,
       const arg_type<Date>& date,
       const TInput& value) {
-    __builtin_sub_overflow(date, value, &result);
+    int32_t tmp;
+    __builtin_sub_overflow(date, static_cast<int32_t>(value), &tmp);
+    result = tmp;
   }
 };
 
@@ -926,10 +930,12 @@ struct MakeYMIntervalFunction {
   FOLLY_ALWAYS_INLINE void call(
       out_type<IntervalYearMonth>& result,
       const int32_t year) {
+    int32_t tmp;
     VELOX_USER_CHECK(
-        !__builtin_mul_overflow(year, kMonthInYear, &result),
+        !__builtin_mul_overflow(year, static_cast<int32_t>(kMonthInYear), &tmp),
         "Integer overflow in make_ym_interval({})",
         year);
+    result = tmp;
   }
 
   FOLLY_ALWAYS_INLINE void call(

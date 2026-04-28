@@ -201,8 +201,8 @@ void addSubfields(
       if (subfields.empty()) {
         return;
       }
-      constexpr long kMaxIndex = std::numeric_limits<vector_size_t>::max();
-      long maxIndex = -1;
+      constexpr int64_t kMaxIndex = std::numeric_limits<vector_size_t>::max();
+      int64_t maxIndex = -1;
       for (auto& subfield : subfields) {
         auto* element = subfield.subfield->path()[level].get();
         if (dynamic_cast<const common::Subfield::AllSubscripts*>(element)) {

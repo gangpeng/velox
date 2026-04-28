@@ -3756,7 +3756,7 @@ TEST_F(KeyEncoderTest, encodeFuzz) {
       velox::TINYINT(),
       velox::DOUBLE(),
       velox::REAL(),
-      velox::BOOLEAN(),
+      velox::ScalarType<velox::TypeKind::BOOLEAN>::create(),
       velox::VARCHAR(),
       velox::DATE(),
       velox::TIMESTAMP()};

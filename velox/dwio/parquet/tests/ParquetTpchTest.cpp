@@ -75,6 +75,13 @@ class ParquetTpchTest : public testing::Test {
   }
 
   static void TearDownTestSuite() {
+    // Destroy suite-owned objects before unregistering connectors and before
+    // process-global teardown runs. MSVC otherwise destroys these static
+    // shared_ptrs after main(), which can crash in DuckDB/Velox cleanup.
+    tpchBuilder_.reset();
+    duckDb_.reset();
+    tempDirectory_.reset();
+
     connector::unregisterConnector(kHiveConnectorId);
     connector::unregisterConnector(kTpchConnectorId);
     parquet::unregisterParquetReaderFactory();

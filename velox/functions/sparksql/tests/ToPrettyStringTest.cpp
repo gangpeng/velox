@@ -79,6 +79,9 @@ TEST_F(ToPrettyStringTest, binary) {
 }
 
 TEST_F(ToPrettyStringTest, timestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   EXPECT_EQ(
       toPrettyString<Timestamp>(Timestamp(946729316, 123)),
       "2000-01-01 12:21:56");

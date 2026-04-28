@@ -105,13 +105,13 @@ class PartitionedOutputReplayerTest
             {{core::QueryConfig::kQueryTraceEnabled, "true"},
              {core::QueryConfig::kQueryTraceDir, traceRoot},
              {core::QueryConfig::kQueryTraceMaxBytes,
-              std::to_string(100UL << 30)},
+              std::to_string(100ULL << 30)},
              {core::QueryConfig::kQueryTraceTaskRegExp, ".*"},
              {core::QueryConfig::kQueryTraceNodeId, capturedPlanNodeId},
              {core::QueryConfig::kMaxPartitionedOutputBufferSize,
-              std::to_string(8UL << 20)},
+              std::to_string(8ULL << 20)},
              {core::QueryConfig::kMaxOutputBufferSize,
-              std::to_string(8UL << 20)}}),
+              std::to_string(8ULL << 20)}}),
         Task::ExecutionMode::kParallel,
         exec::Consumer{});
     return task;

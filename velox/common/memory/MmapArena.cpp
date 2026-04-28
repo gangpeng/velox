@@ -16,9 +16,9 @@
 
 #include "velox/common/memory/MmapArena.h"
 
-#include <sys/mman.h>
 #include "velox/common/base/BitUtil.h"
 #include "velox/common/memory/Memory.h"
+#include "velox/common/memory/SystemMemory.h"
 
 namespace facebook::velox::memory {
 uint64_t MmapArena::roundBytes(uint64_t bytes) {
@@ -31,18 +31,12 @@ MmapArena::MmapArena(size_t capacityBytes) : byteSize_(capacityBytes) {
       0,
       "Arena must have a multiple of {} bytes capacity.",
       kMinGrainSizeBytes);
-  void* ptr = mmap(
-      nullptr,
-      capacityBytes,
-      PROT_READ | PROT_WRITE,
-      MAP_PRIVATE | MAP_ANONYMOUS,
-      -1,
-      0);
-  if (ptr == MAP_FAILED || ptr == nullptr) {
+  void* ptr = systemMmap(capacityBytes);
+  if (ptr == nullptr) {
     VELOX_FAIL(
         "Could not allocate working memory"
-        "mmap failed with errno {} with capacity bytes {}",
-        folly::errnoStr(errno),
+        "mmap failed with {} with capacity bytes {}",
+        systemMemoryError(),
         capacityBytes);
   }
   address_ = reinterpret_cast<uint8_t*>(ptr);
@@ -51,7 +45,7 @@ MmapArena::MmapArena(size_t capacityBytes) : byteSize_(capacityBytes) {
 }
 
 MmapArena::~MmapArena() {
-  ::munmap(address_, byteSize_);
+  systemMunmap(address_, byteSize_);
 }
 
 void* MmapArena::allocate(uint64_t bytes) {
@@ -89,7 +83,7 @@ void MmapArena::free(void* address, uint64_t bytes) {
   }
   bytes = roundBytes(bytes);
 
-  ::madvise(address, bytes, MADV_DONTNEED);
+  systemMadviseDontNeed(address, bytes);
   freeBytes_ += bytes;
 
   const auto curAddr = reinterpret_cast<uintptr_t>(address);

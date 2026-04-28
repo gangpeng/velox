@@ -232,7 +232,7 @@ class PrefixEncoderTest : public testing::Test,
   template <TypeKind Kind>
   void testFuzz() {
     using ValueDataType = typename TypeTraits<Kind>::NativeType;
-    const int vectorSize = 1024;
+    const size_t vectorSize = 1024;
 
     auto compare = [](char* left, char* right) {
       const auto result = std::memcmp(left, right, sizeof(ValueDataType) + 1);

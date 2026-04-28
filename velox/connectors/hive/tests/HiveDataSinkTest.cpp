@@ -126,7 +126,7 @@ class HiveDataSinkTest : public exec::test::HiveConnectorTestBase {
     root_.reset();
 
     root_ = memory::memoryManager()->addRootPool(
-        "HiveDataSinkTest", 1L << 30, exec::MemoryReclaimer::create());
+        "HiveDataSinkTest", 1LL << 30, exec::MemoryReclaimer::create());
     opPool_ = root_->addLeafChild("operator");
     connectorPool_ =
         root_->addAggregateChild("connector", exec::MemoryReclaimer::create());
@@ -953,7 +953,7 @@ TEST_F(HiveDataSinkTest, memoryReclaimAfterClose) {
     } else {
       ASSERT_FALSE(root_->reclaimableBytes().has_value());
     }
-    ASSERT_EQ(root_->reclaim(1L << 30, 0, stats), 0);
+    ASSERT_EQ(root_->reclaim(1LL << 30, 0, stats), 0);
     ASSERT_EQ(stats.reclaimExecTimeUs, 0);
     ASSERT_EQ(stats.reclaimedBytes, 0);
     if (testData.expectedWriterReclaimEnabled) {
@@ -1824,7 +1824,7 @@ TEST_F(HiveDataSinkTest, fileRotationWithMemoryReclaim) {
   auto reclaimableBytes = root_->reclaimableBytes();
   if (reclaimableBytes.has_value() && reclaimableBytes.value() > 0) {
     memory::MemoryReclaimer::Stats reclaimStats;
-    root_->reclaim(1L << 20, 0, reclaimStats);
+    root_->reclaim(1LL << 20, 0, reclaimStats);
   }
 
   ASSERT_TRUE(dataSink->finish());

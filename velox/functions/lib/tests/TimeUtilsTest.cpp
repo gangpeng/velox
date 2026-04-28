@@ -104,6 +104,9 @@ TEST(TimeUtilsTest, adjustEpoch) {
 }
 
 TEST(TimeUtilsTest, truncateTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   auto* timezone = tz::locateZone("GMT");
 
   EXPECT_EQ(

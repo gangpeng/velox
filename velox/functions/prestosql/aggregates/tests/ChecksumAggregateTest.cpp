@@ -186,26 +186,33 @@ TEST_F(ChecksumAggregateTest, shortDecimals) {
   assertSingleGroupChecksum<int64_t>({-100000}, "oMEXFgd/75k=", DECIMAL(10, 5));
   // max ShortDecimal: cast(999999999999999999 as DECIMAL(18, 0))
   assertSingleGroupChecksum<int64_t>(
-      {DecimalUtil::kShortDecimalMax}, "eTXQp+w9eBA=", DECIMAL(18, 0));
+      {static_cast<int64_t>(DecimalUtil::kShortDecimalMax)},
+      "eTXQp+w9eBA=",
+      DECIMAL(18, 0));
   // min ShortDecimal: cast(-999999999999999999 as DECIMAL(18, 0))
   assertSingleGroupChecksum<int64_t>(
-      {DecimalUtil::kShortDecimalMin}, "h8ovWBPCh+8=", DECIMAL(18, 0));
+      {static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
+      "h8ovWBPCh+8=",
+      DECIMAL(18, 0));
 
   assertSingleGroupChecksum<int64_t>(
-      {DecimalUtil::kShortDecimalMin, DecimalUtil::kShortDecimalMax},
+      {static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
+       static_cast<int64_t>(DecimalUtil::kShortDecimalMax)},
       "AAAAAAAAAAA=",
       DECIMAL(18, 0));
   assertSingleGroupChecksum<int64_t>(
-      {DecimalUtil::kShortDecimalMin, DecimalUtil::kShortDecimalMin},
+      {static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
+       static_cast<int64_t>(DecimalUtil::kShortDecimalMin)},
       "DpVfsCaED98=",
       DECIMAL(18, 0));
   assertSingleGroupChecksum<int64_t>(
-      {DecimalUtil::kShortDecimalMax, DecimalUtil::kShortDecimalMax},
+      {static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+       static_cast<int64_t>(DecimalUtil::kShortDecimalMax)},
       "8mqgT9l78CA=",
       DECIMAL(18, 0));
   assertSingleGroupChecksum<int64_t>(
-      {DecimalUtil::kShortDecimalMax,
-       DecimalUtil::kShortDecimalMax,
+      {static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+       static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
        std::nullopt},
       "eTWM1Yr1J78=",
       DECIMAL(18, 0));

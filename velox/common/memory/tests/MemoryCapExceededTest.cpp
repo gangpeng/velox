@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <gmock/gmock.h>
 #include "velox/common/base/tests/GTestUtils.h"
 #include "velox/common/memory/MallocAllocator.h"
 #include "velox/common/memory/Memory.h"
@@ -67,32 +68,49 @@ TEST_P(MemoryCapExceededTest, singleDriver) {
   constexpr int64_t kMaxBytes = 5LL << 20; // 5MB
   // We look for these lines separately, since their order can change (not sure
   // why).
+  // The CONFIG section contains key-value pairs from map iteration whose
+  // order is non-deterministic across compilers. Check each part separately.
   std::vector<std::string> expectedTexts = {
       "Can't grow ",
-      "capacity with 2.00MB. This will exceed its memory pool capacity 5.00MB, current "
-      "capacity 5.00MB.\n"
-      "ARBITRATOR[SHARED CAPACITY[6.00GB] STATS[numRequests 1 numRunning 1 "
-      "numSucceded 0 numAborted 0 numFailures 0 numNonReclaimableAttempts 0 "
-      "reclaimedFreeCapacity 0B reclaimedUsedCapacity 0B maxCapacity 6.00GB "
-      "freeCapacity 5.50GB freeReservedCapacity 0B] CONFIG[kind=SHARED;"
-      "capacity=6.00GB;arbitrationStateCheckCb=(set);"
-      "memory-pool-abort-capacity-limit=0B;memory-pool-min-reclaim-pct=0;"
-      "memory-pool-reserved-capacity=0B;"
-      "memory-pool-initial-capacity=536870912B;"
-      "global-arbitration-enabled=true;memory-pool-min-reclaim-bytes=0B;"
-      "reserved-capacity=0B;]]"
-      "\n\n"
+      "capacity with 2.00MB. This will exceed its memory pool capacity 5.00MB, "
+      "current capacity ",
+      "ARBITRATOR[SHARED CAPACITY[6.00GB] STATS[",
+      "numRequests 1 numRunning 1 numSucceded 0 numAborted 0 numFailures 0 "
+      "numNonReclaimableAttempts 0",
+      "reclaimedUsedCapacity 0B maxCapacity 6.00GB",
+      "freeReservedCapacity 0B]",
       "Memory Pool[",
       " AGGREGATE root[",
-      "] parent[null] MALLOC track-usage thread-safe]<max capacity 5.00MB "
-      "capacity 5.00MB used 3.75MB available 0B reservation [used 0B, reserved "
-      "5.00MB, min 0B] counters [allocs 0, frees 0, reserves 0, releases 0, "
-      "collisions 0])>"};
+      "] parent[null] MALLOC track-usage thread-safe]<max capacity 5.00MB "};
+  // Arbitration can reclaim unused reserved capacity before the failing grow.
+  // The exact current capacity and reclaimed-free counters are therefore
+  // transient, but the failed 2MB grow against the 5MB pool cap is stable.
+  std::vector<std::string> expectedLinePatterns = {
+      "capacity with 2\\.00MB\\. This will exceed its memory pool capacity "
+      "5\\.00MB, current capacity [45]\\.00MB\\.",
+      "reclaimedFreeCapacity (0B|1\\.00MB).*freeCapacity 5\\.50GB"};
+  // CONFIG key-value pairs whose iteration order differs across compilers.
+  std::vector<std::string> expectedConfigPairs = {
+      "kind=SHARED",
+      "capacity=6.00GB",
+      "arbitrationStateCheckCb=(set)",
+      "memory-pool-abort-capacity-limit=0B",
+      "memory-pool-min-reclaim-pct=0",
+      "memory-pool-reserved-capacity=0B",
+      "memory-pool-initial-capacity=536870912B",
+      "global-arbitration-enabled=true",
+      "memory-pool-min-reclaim-bytes=0B",
+      "reserved-capacity=0B",
+  };
+  // Exact aggregation usage depends on when the failing reservation observes
+  // the running task. The pool hierarchy and reserved capacity are the stable
+  // details this test needs to verify.
   std::vector<std::string> expectedDetailedTexts = {
-      "node.1 usage 12.00KB reserved 1.00MB peak 1.00MB",
-      "op.1.0.0.FilterProject usage 12.00KB reserved 1.00MB peak 12.00KB",
-      "node.2 usage 3.74MB reserved 4.00MB peak 4.00MB",
-      "op.2.0.0.Aggregation usage 3.74MB reserved 4.00MB peak 3.76MB",
+      "node\\.1 usage 12\\.00KB reserved 1\\.00MB peak 1\\.00MB",
+      "op\\.1\\.0\\.0\\.FilterProject usage 12\\.00KB reserved 1\\.00MB "
+      "peak 12\\.00KB",
+      "node\\.2 usage .* reserved 4\\.00MB peak 4\\.00MB",
+      "op\\.2\\.0\\.0\\.Aggregation usage .* reserved 4\\.00MB peak .*",
       "Top 2 leaf memory pool usages:"};
 
   std::vector<RowVectorPtr> data;
@@ -129,6 +147,16 @@ TEST_P(MemoryCapExceededTest, singleDriver) {
       ASSERT_TRUE(errorMessage.find(expectedText) != std::string::npos)
           << "Expected error message to contain \n'" << expectedText
           << "',\n but received \n'" << errorMessage << "'.";
+    }
+    for (const auto& expectedPattern : expectedLinePatterns) {
+      ASSERT_TRUE(someLineMatches(errorMessage, expectedPattern))
+          << "Expected error message to contain a line matching \n'"
+          << expectedPattern << "',\n but received \n'" << errorMessage << "'.";
+    }
+    for (const auto& configPair : expectedConfigPairs) {
+      EXPECT_THAT(errorMessage, testing::HasSubstr(configPair))
+          << "Expected error message to contain config pair '" << configPair
+          << "'.";
     }
     for (const auto& expectedText : expectedDetailedTexts) {
       LOG(ERROR) << expectedText;

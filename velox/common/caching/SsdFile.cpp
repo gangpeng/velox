@@ -25,6 +25,7 @@
 #include "velox/common/memory/Memory.h"
 #include "velox/common/process/TraceContext.h"
 
+#ifndef _WIN32
 #include <fcntl.h>
 #ifdef linux
 #include <linux/fs.h>
@@ -32,6 +33,11 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#else
+#include <io.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 #include <numeric>
 
 DECLARE_bool(velox_ssd_odirect);

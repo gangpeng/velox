@@ -19,6 +19,8 @@
 #include "velox/expression/Expr.h"
 #include "velox/type/Type.h"
 
+#include <initializer_list>
+
 namespace facebook::velox::exec {
 class FunctionCallToSpecialForm {
  public:
@@ -57,6 +59,14 @@ class FunctionCallToSpecialForm {
 TypePtr resolveTypeForSpecialForm(
     const std::string& functionName,
     const std::vector<TypePtr>& argTypes);
+
+/// Overload accepting an initializer list of TypePtr for convenience.
+inline TypePtr resolveTypeForSpecialForm(
+    const std::string& functionName,
+    std::initializer_list<TypePtr> argTypes) {
+  return resolveTypeForSpecialForm(
+      functionName, std::vector<TypePtr>(argTypes));
+}
 
 TypePtr resolveTypeForSpecialFormWithCoercions(
     const std::string& functionName,

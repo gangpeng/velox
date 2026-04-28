@@ -28,6 +28,7 @@
 #include <folly/hash/Checksum.h>
 #include <gflags/gflags.h>
 #include <gtest/gtest.h>
+#include "velox/common/base/tests/GTestUtils.h"
 
 DECLARE_bool(bmi2); // NOLINT
 
@@ -804,7 +805,7 @@ TEST_F(BitUtilTest, forBatches) {
       auto bitfield =
           reinterpret_cast<const uint64_t*>(bits)[index / 64] & mask;
       EXPECT_NE(0, bitfield & mask);
-      numSet += __builtin_popcountl(bitfield);
+      numSet += __builtin_popcountll(bitfield);
     });
     EXPECT_EQ(numOnes, numSet);
   };
@@ -851,10 +852,11 @@ TEST_F(BitUtilTest, rotateLeft64) {
 }
 
 TEST_F(BitUtilTest, bswap128) {
-  EXPECT_EQ(builtin_bswap128(10), HugeInt::build(720575940379279360, 0));
-  EXPECT_EQ(
-      builtin_bswap128(HugeInt::build(0x08FFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF)),
-      -248);
+  EXPECT_TRUE(
+      builtin_bswap128(10) == HugeInt::build(720575940379279360, 0));
+  EXPECT_TRUE(
+      builtin_bswap128(HugeInt::build(0x08FFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF)) ==
+      int128_t(-248));
 }
 
 TEST_F(BitUtilTest, countLeadingZeros) {

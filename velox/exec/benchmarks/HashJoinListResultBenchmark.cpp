@@ -536,7 +536,7 @@ int main(int argc, char** argv) {
   folly::Init init{&argc, &argv};
   memory::MemoryManager::Options options;
   options.useMmapAllocator = true;
-  options.allocatorCapacity = 10UL << 30;
+  options.allocatorCapacity = 10ULL << 30;
   options.useMmapArena = true;
   options.mmapArenaCapacityRatio = 1;
   memory::MemoryManager::initialize(options);
@@ -544,7 +544,7 @@ int main(int argc, char** argv) {
   auto bm = std::make_unique<HashTableListJoinResultBenchmark>();
   std::vector<HashTableBenchmarkResult> results;
 
-  auto hashTableSize = (2L << 20) - 3;
+  auto hashTableSize = (2LL << 20) - 3;
   auto probeRowSize = 100000000L;
 
   TypePtr onlyKeyType{ROW({"k1"}, {BIGINT()})};

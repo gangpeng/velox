@@ -29,6 +29,19 @@ std::string escapePathName(const std::string& name) {
   // calls resize() at the end to shrink to the actual size used.
   encoded.resize(name.size() * 9);
   functions::detail::urlEscape(encoded, name);
+  // Presto URL escaping leaves '*' unescaped, but '*' is not a valid Windows
+  // filename character. Percent-encoding it keeps the Iceberg path segment
+  // URI-safe and lets local filesystem tests create the partition directory.
+  size_t pos = 0;
+  while ((pos = encoded.find('*', pos)) != std::string::npos) {
+    encoded.replace(pos, 1, "%2A");
+    pos += 3;
+  }
+  if (!encoded.empty() && encoded.back() == '.') {
+    // Windows also rejects directory names that end in a dot even though '.'
+    // is valid elsewhere in the segment.
+    encoded.replace(encoded.size() - 1, 1, "%2E");
+  }
   return encoded;
 }
 

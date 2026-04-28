@@ -169,7 +169,7 @@ TEST_P(E2EReaderTest, SharedDictionaryFlatmapReadAsStruct) {
       }
     }
     writer->write(std::move(batch));
-    size = std::min(size * 2, 2048UL);
+    size = std::min<size_t>(size * 2, 2048);
   }
   writer->close();
   writer.reset();

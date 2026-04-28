@@ -514,6 +514,16 @@ struct udf_has_name : std::false_type {};
 template <typename T>
 struct udf_has_name<T, decltype(&T::name, 0)> : std::true_type {};
 
+// Helper to safely get the last type from a tuple without invalid index.
+// Primary: non-empty tuple case - returns isVariadicType of the last element.
+template <size_t NumArgs, typename ArgTypes>
+struct IsLastArgVariadic : std::false_type {};
+
+template <size_t NumArgs, typename ArgTypes>
+  requires(NumArgs > 0)
+struct IsLastArgVariadic<NumArgs, ArgTypes>
+    : isVariadicType<std::tuple_element_t<NumArgs - 1, ArgTypes>> {};
+
 template <
     typename Fun,
     typename TReturn,
@@ -579,11 +589,7 @@ class SimpleFunctionMetadata : public ISimpleFunctionMetadata {
   }
 
   static constexpr bool isVariadic() {
-    if constexpr (num_args == 0) {
-      return false;
-    } else {
-      return isVariadicType<type_at<num_args - 1>>::value;
-    }
+    return IsLastArgVariadic<static_cast<size_t>(num_args), arg_types>::value;
   }
 
   explicit SimpleFunctionMetadata(
@@ -1031,11 +1037,7 @@ class UDFHolder {
   }
 
   static constexpr bool isVariadic() {
-    if constexpr (num_args == 0) {
-      return false;
-    } else {
-      return isVariadicType<type_at<num_args - 1>>::value;
-    }
+    return IsLastArgVariadic<static_cast<size_t>(num_args), arg_types>::value;
   }
 
   FOLLY_ALWAYS_INLINE void initialize(

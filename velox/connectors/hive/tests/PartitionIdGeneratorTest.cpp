@@ -246,6 +246,9 @@ TEST_F(PartitionIdGeneratorTest, limitOfPartitionNumber) {
 }
 
 TEST_F(PartitionIdGeneratorTest, timestampPartitionKeyComparasion) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   PartitionIdGenerator idGenerator(
       ROW({"timestamp_col"}, {TIMESTAMP()}), {0}, 100, pool());
   auto timestampResult = util::fromTimestampString(

@@ -50,13 +50,18 @@ std::optional<column_index_t> getKeyChannelImpl(
   }
 
   // Here there was at least one hash match. Need to compare to the keys vector
-  // to ensure it's an actual match and not a hash collision.
+  // to ensure it's an actual match and not a hash collision. If there are
+  // duplicate keys, return the last matching channel (highest index) to
+  // implement "last writer wins" semantics.
+  std::optional<column_index_t> result;
   for (auto it = range.first; it != range.second; ++it) {
     if (simpleKeys->valueAt(it->second) == keyValue) {
-      return it->second;
+      if (!result || it->second > *result) {
+        result = it->second;
+      }
     }
   }
-  return std::nullopt;
+  return result;
 }
 
 } // namespace
@@ -87,12 +92,17 @@ std::optional<column_index_t> FlatMapVector::getKeyChannel(
     return std::nullopt;
   }
 
+  // If there are duplicate keys, return the last matching channel (highest
+  // index) to implement "last writer wins" semantics.
+  std::optional<column_index_t> result;
   for (auto it = range.first; it != range.second; ++it) {
     if (keysVector->equalValueAt(distinctKeys_.get(), index, it->second)) {
-      return it->second;
+      if (!result || it->second > *result) {
+        result = it->second;
+      }
     }
   }
-  return std::nullopt;
+  return result;
 }
 
 vector_size_t FlatMapVector::sizeAt(vector_size_t index) const {

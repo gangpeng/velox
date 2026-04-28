@@ -1088,6 +1088,9 @@ TEST_F(SparkCastExprTestAnsiOn, timestampToInt) {
 }
 
 TEST_F(SparkCastExprTestAnsiOn, timestampToString) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   testTimestampToString();
 }
 
@@ -1143,6 +1146,9 @@ TEST_F(SparkCastExprTestAnsiOn, stringToBoolean) {
 }
 
 TEST_F(SparkCastExprTestAnsiOn, stringToTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   testStringToTimestamp();
 }
 
@@ -1369,6 +1375,9 @@ TEST_F(SparkCastExprTestAnsiOff, timestampToInt) {
 }
 
 TEST_F(SparkCastExprTestAnsiOff, timestampToString) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   testTimestampToString();
 }
 
@@ -1420,6 +1429,9 @@ TEST_F(SparkCastExprTestAnsiOff, stringToBoolean) {
 }
 
 TEST_F(SparkCastExprTestAnsiOff, stringToTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database";
+#endif
   testStringToTimestamp();
   testCast<std::string, Timestamp>("timestamp", {"INVALID"}, {std::nullopt});
 }

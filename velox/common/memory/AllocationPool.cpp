@@ -44,6 +44,7 @@ void AllocationPool::clear() {
   largeAllocations_.clear();
   startOfRun_ = nullptr;
   bytesInRun_ = 0;
+  reservedBytesInRun_ = 0;
   currentOffset_ = 0;
   usedBytes_ = 0;
 }
@@ -78,13 +79,36 @@ char* AllocationPool::allocateFixed(uint64_t bytes, int32_t alignment) {
 
 void AllocationPool::maybeGrowLastAllocation(uint64_t bytesRequested) {
   const auto updateOffset = currentOffset_ + bytesRequested;
+  if (largeAllocations_.empty()) {
+    currentOffset_ = updateOffset;
+    return;
+  }
+
+  uint64_t logicalBytesToReserve = 0;
   if (updateOffset > endOfReservedRun()) {
     VELOX_CHECK_GT(bytesInRun_, AllocationTraits::kHugePageSize);
-    const auto bytesToReserve = bits::roundUp(
+    logicalBytesToReserve = bits::roundUp(
         updateOffset - endOfReservedRun(), AllocationTraits::kHugePageSize);
-    largeAllocations_.back().grow(AllocationTraits::numPages(bytesToReserve));
-    usedBytes_ += bytesToReserve;
   }
+
+  uint64_t backingBytesToReserve = 0;
+  const auto writableAfterLogicalGrow =
+      endOfWritableRun() + logicalBytesToReserve;
+  if (updateOffset > writableAfterLogicalGrow) {
+    // Windows can need committed backing pages that are only used to bridge the
+    // gap between the mmap allocation start and the aligned logical run.
+    backingBytesToReserve = bits::roundUp(
+        updateOffset - writableAfterLogicalGrow,
+        AllocationTraits::kHugePageSize);
+  }
+
+  if (logicalBytesToReserve + backingBytesToReserve > 0) {
+    largeAllocations_.back().grow(AllocationTraits::numPages(
+        logicalBytesToReserve + backingBytesToReserve));
+    reservedBytesInRun_ += logicalBytesToReserve;
+    usedBytes_ += logicalBytesToReserve;
+  }
+
   // Only update currentOffset_ once it points to valid data.
   currentOffset_ = updateOffset;
 }
@@ -123,6 +147,7 @@ void AllocationPool::newRunImpl(MachinePageCount numPages) {
     auto range = largeAlloc.hugePageRange().value();
     startOfRun_ = range.data();
     bytesInRun_ = range.size();
+    reservedBytesInRun_ = AllocationTraits::pageBytes(pagesToAlloc);
     largeAllocations_.emplace_back(std::move(largeAlloc));
     currentOffset_ = 0;
     usedBytes_ += AllocationTraits::pageBytes(pagesToAlloc);
@@ -135,6 +160,7 @@ void AllocationPool::newRunImpl(MachinePageCount numPages) {
   VELOX_CHECK_EQ(allocation.numRuns(), 1);
   startOfRun_ = allocation.runAt(0).data<char>();
   bytesInRun_ = allocation.runAt(0).numBytes();
+  reservedBytesInRun_ = bytesInRun_;
   currentOffset_ = 0;
   allocations_.push_back(std::move(allocation));
   usedBytes_ += bytesInRun_;

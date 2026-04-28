@@ -141,7 +141,7 @@ TEST_F(OperatorTraceTest, emptyTrace) {
           .plan(plan)
           .config(core::QueryConfig::kQueryTraceEnabled, true)
           .config(core::QueryConfig::kQueryTraceDir, traceDirPath->getPath())
-          .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+          .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
           .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
           .config(core::QueryConfig::kQueryTraceNodeId, planNodeId)
           .assertResults("SELECT a, count(1) FROM tmp WHERE a > 0 GROUP BY 1");
@@ -184,7 +184,7 @@ TEST_F(OperatorTraceTest, traceData) {
           limitExceeded);
     }
   } testSettings[]{
-      {0, 0, true}, {800, 2, true}, {100UL << 30, numBatch, false}};
+      {0, 0, true}, {800, 2, true}, {100ULL << 30, numBatch, false}};
 
   for (const auto& testData : testSettings) {
     SCOPED_TRACE(testData.debugString());
@@ -389,7 +389,7 @@ TEST_F(OperatorTraceTest, task) {
             {core::QueryConfig::kSpillNumPartitionBits, "17"},
             {core::QueryConfig::kQueryTraceEnabled, "true"},
             {core::QueryConfig::kQueryTraceMaxBytes,
-             std::to_string(100UL << 30)},
+             std::to_string(100ULL << 30)},
             {core::QueryConfig::kQueryTraceDir, outputDir->getPath()},
             {core::QueryConfig::kQueryTraceTaskRegExp, testData.taskRegExpr},
             {core::QueryConfig::kQueryTraceNodeId, hashJoinNodeId},
@@ -545,10 +545,10 @@ TEST_F(OperatorTraceTest, traceTableWriter) {
           limitExceeded);
     }
   } testSettings[]{
-      {".*", 10UL << 30, numBatch, false},
+      {".*", 10ULL << 30, numBatch, false},
       {".*", 0, numBatch, true},
-      {"wrong id", 10UL << 30, 0, false},
-      {"test_cursor_\\d+", 10UL << 30, numBatch, false},
+      {"wrong id", 10ULL << 30, 0, false},
+      {"test_cursor_\\d+", 10ULL << 30, numBatch, false},
       {"test_cursor_\\d+", 800, 2, true}};
 
   for (const auto& testData : testSettings) {
@@ -650,10 +650,10 @@ TEST_F(OperatorTraceTest, filterProject) {
           limitExceeded);
     }
   } testSettings[]{
-      {".*", 10UL << 30, numBatch, false},
+      {".*", 10ULL << 30, numBatch, false},
       {".*", 0, numBatch, true},
-      {"wrong id", 10UL << 30, 0, false},
-      {"test_cursor_\\d+", 10UL << 30, numBatch, false},
+      {"wrong id", 10ULL << 30, 0, false},
+      {"test_cursor_\\d+", 10ULL << 30, numBatch, false},
       {"test_cursor_\\d+", 800, 2, true}};
 
   for (const auto& testData : testSettings) {
@@ -1013,10 +1013,10 @@ TEST_F(OperatorTraceTest, hashJoin) {
           limitExceeded);
     }
   } testSettings[]{
-      {".*", 10UL << 30, numBatch, false},
+      {".*", 10ULL << 30, numBatch, false},
       {".*", 0, numBatch, true},
-      {"wrong id", 10UL << 30, 0, false},
-      {"test_cursor_\\d+", 10UL << 30, numBatch, false},
+      {"wrong id", 10ULL << 30, 0, false},
+      {"test_cursor_\\d+", 10ULL << 30, numBatch, false},
       {"test_cursor_\\d+", 800, 2, true}};
 
   for (const auto& testData : testSettings) {

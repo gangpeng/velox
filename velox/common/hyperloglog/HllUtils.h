@@ -59,8 +59,8 @@ inline uint32_t computeIndex(uint64_t hash, int indexBitLength) {
 inline int numberOfLeadingZeros(uint64_t hash, int indexBitLength) {
   // Place a 1 in the LSB to preserve the original number of leading zeros if
   // the hash happens to be 0.
-  return __builtin_clzl(
-      (hash << indexBitLength) | (1L << (indexBitLength - 1)));
+  return __builtin_clzll(
+      (hash << indexBitLength) | (1LL << (indexBitLength - 1)));
 }
 
 /// Estimates cardinality using Linear Counting algorithm.

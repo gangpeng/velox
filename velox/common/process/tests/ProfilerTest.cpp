@@ -91,6 +91,7 @@ TEST(ProfilerTest, basic) {
 }
 
 int main(int argc, char** argv) {
+#ifndef _WIN32
   // Fork a child process to run all the tests.
   int32_t pid = fork();
   if (pid < 0) {
@@ -134,6 +135,7 @@ int main(int argc, char** argv) {
     }
     return WEXITSTATUS(wstatus);
   }
+#endif // !_WIN32
 
   testing::InitGoogleTest(&argc, argv);
   // Signal handler required for ThreadDebugInfoTest

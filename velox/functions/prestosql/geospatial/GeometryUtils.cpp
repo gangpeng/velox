@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifdef _MSC_VER
+#define _USE_MATH_DEFINES
+#endif
 #include "velox/functions/prestosql/geospatial/GeometryUtils.h"
 #include <geos/geom/prep/PreparedGeometryFactory.h>
 #include <geos/operation/valid/IsSimpleOp.h>

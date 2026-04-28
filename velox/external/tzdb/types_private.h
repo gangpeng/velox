@@ -27,6 +27,14 @@
 // should be reconsidered. (For now the design is kept as is, in case this
 // header needs to be public for unforseen reasons.)
 
+// On MSVC, sal.h defines __in as _In_ (a SAL annotation macro). Undefine it
+// to prevent it from clashing with the member variable name __in used below.
+#ifdef _MSC_VER
+#ifdef __in
+#undef __in
+#endif
+#endif
+
 namespace facebook::velox::tzdb {
 
 // Sun>=8   first Sunday on or after the eighth
@@ -77,7 +85,7 @@ struct __save {
 struct __rule {
   date::year __from;
   date::year __to;
-  date::month __in;
+  date::month __in{};
   facebook::velox::tzdb::__on __on;
   facebook::velox::tzdb::__at __at;
   facebook::velox::tzdb::__save __save;
@@ -114,7 +122,7 @@ struct __continuation {
   // TODO TZDB the until field can contain more than just a year.
   // Parts of the UNTIL, the optional parts are default initialized
   //    optional<year> __until_;
-  date::year __year = date::year::min();
+  date::year __year{date::year::min()};
   date::month __in{date::January};
   facebook::velox::tzdb::__on __on{date::day{1}};
   facebook::velox::tzdb::__at __at{

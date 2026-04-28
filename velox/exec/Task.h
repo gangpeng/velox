@@ -106,6 +106,9 @@ class Task : public std::enable_shared_from_this<Task> {
 
   ~Task();
 
+  Task(const Task&) = delete;
+  Task& operator=(const Task&) = delete;
+
   /// Returns human-friendly representation of the plan augmented with runtime
   /// statistics. The implementation invokes exec::printPlanWithStats().
   ///
@@ -232,7 +235,7 @@ class Task : public std::enable_shared_from_this<Task> {
   /// and the operation is silently ignored if Task is not running.
   void setMaxSplitSequenceId(
       const core::PlanNodeId& planNodeId,
-      long maxSequenceId);
+      int64_t maxSequenceId);
 
   /// Adds split for a source operator corresponding to plan node with
   /// specified ID.
@@ -245,7 +248,7 @@ class Task : public std::enable_shared_from_this<Task> {
   bool addSplitWithSequence(
       const core::PlanNodeId& planNodeId,
       exec::Split&& split,
-      long sequenceId);
+      int64_t sequenceId);
 
   /// Adds split for a source operator corresponding to plan node with
   /// specified ID. Does not require sequential id.

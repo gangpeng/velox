@@ -168,8 +168,8 @@ class MmapAllocator : public MemoryAllocator {
     MachinePageCount adviseAway(MachinePageCount numPages);
 
     // Sets the mapped bits for the runs in 'allocation' to 'value' for the
-    // addresses that fall in the range of 'this'
-    void setAllMapped(const Allocation& allocation, bool value);
+    // addresses that fall in the range of 'this'.
+    bool setAllMapped(const Allocation& allocation, bool value);
 
     // Sets the mapped flag for the class pages in 'run' to 'value'
     void setMappedBits(const Allocation::PageRun run, bool value);
@@ -333,7 +333,7 @@ class MmapAllocator : public MemoryAllocator {
   // update 'numAllocated'.
   MachinePageCount freeNonContiguousInternal(Allocation& allocation);
 
-  void markAllMapped(const Allocation& allocation);
+  bool markAllMapped(const Allocation& allocation);
 
   // Finds at least  'target' unallocated pages in different size classes and
   // advises them away. Returns the number of pages advised away.

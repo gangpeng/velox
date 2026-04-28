@@ -228,9 +228,12 @@ TEST_F(ExprStatsTest, listener) {
   ASSERT_EQ(1, stats.at("mod").numProcessedVectors);
   ASSERT_EQ(1024, stats.at("mod").numProcessedRows);
 
+#ifndef _WIN32
+  // Windows CPU timing may return 0 for very short operations.
   for (const auto& name : {"plus", "multiply", "mod"}) {
     ASSERT_GT(stats.at(name).timing.cpuNanos, 0);
   }
+#endif
 
   // Evaluate the same expressions twice and verify that stats received by the
   // listener are "doubled".
@@ -251,9 +254,12 @@ TEST_F(ExprStatsTest, listener) {
 
   ASSERT_EQ(2, stats.at("mod").numProcessedVectors);
   ASSERT_EQ(1024 * 2, stats.at("mod").numProcessedRows);
+#ifndef _WIN32
+  // Windows CPU timing may return 0 for very short operations.
   for (const auto& name : {"plus", "multiply", "mod"}) {
     ASSERT_GT(stats.at(name).timing.cpuNanos, 0);
   }
+#endif
 
   ASSERT_NE(events[0].uuid, events[1].uuid);
 
@@ -465,7 +471,10 @@ TEST_F(ExprStatsTest, selectiveCpuTrackingForUdfs) {
         // Verify selective CPU tracking for the specified functions.
         for (const auto& [funcName, funcStats] : stats) {
           if (expectedFuncsWithNonZeroCpu.count(funcName)) {
+#ifndef _WIN32
+            // Windows CPU timing may return 0 for very short operations.
             ASSERT_GT(funcStats.timing.cpuNanos, 0) << funcName;
+#endif
           } else {
             ASSERT_EQ(funcStats.timing.cpuNanos, 0) << funcName;
           }

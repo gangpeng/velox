@@ -84,13 +84,13 @@ TEST_F(XxHash64Test, varchar) {
 }
 
 TEST_F(XxHash64Test, longDecimal) {
-  EXPECT_EQ(xxhash64<int128_t>(12345678), 4541350547708072824);
-  EXPECT_EQ(xxhash64<int128_t>(0), -8959994473701255385);
+  EXPECT_EQ(xxhash64<int128_t>(int128_t(12345678)), 4541350547708072824);
+  EXPECT_EQ(xxhash64<int128_t>(int128_t(0)), -8959994473701255385);
   EXPECT_EQ(
       xxhash64<int128_t>(DecimalUtil::kLongDecimalMin), -2254039905620870768);
   EXPECT_EQ(
       xxhash64<int128_t>(DecimalUtil::kLongDecimalMax), -47190729175993179);
-  EXPECT_EQ(xxhash64<int128_t>(-12345678), -7692719129258511951);
+  EXPECT_EQ(xxhash64<int128_t>(int128_t(-12345678)), -7692719129258511951);
   EXPECT_EQ(xxhash64<int128_t>(std::nullopt), 42);
 }
 

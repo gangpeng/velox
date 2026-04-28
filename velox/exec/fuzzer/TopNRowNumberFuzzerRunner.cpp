@@ -74,9 +74,9 @@ DEFINE_uint32(
     "Timeout in milliseconds for HTTP requests made to reference DB, "
     "such as Presto. Example: --req_timeout_ms=2000");
 
-DEFINE_int64(allocator_capacity, 8L << 30, "Allocator capacity in bytes.");
+DEFINE_int64(allocator_capacity, 8LL << 30, "Allocator capacity in bytes.");
 
-DEFINE_int64(arbitrator_capacity, 6L << 30, "Arbitrator capacity in bytes.");
+DEFINE_int64(arbitrator_capacity, 6LL << 30, "Arbitrator capacity in bytes.");
 
 using namespace facebook::velox;
 

@@ -21,6 +21,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <folly/json.h>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -72,6 +73,18 @@ folly::dynamic extractPartitionValue<TypeKind::TIMESTAMP>(
     const VectorPtr& child,
     vector_size_t row) {
   return child->asChecked<SimpleVector<Timestamp>>()->valueAt(row).toMicros();
+}
+
+template <>
+folly::dynamic extractPartitionValue<TypeKind::HUGEINT>(
+    const VectorPtr& child,
+    vector_size_t row) {
+  // folly::dynamic has no int128_t constructor; convert via ostringstream.
+  const int128_t value =
+      child->asChecked<SimpleVector<int128_t>>()->valueAt(row);
+  std::ostringstream oss;
+  oss << value;
+  return oss.str();
 }
 
 class IcebergFileNameGenerator : public FileNameGenerator {

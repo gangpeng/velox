@@ -151,7 +151,7 @@ TEST_F(WriterContextTest, BuildPhysicalSizeAggregators) {
 
 TEST_F(WriterContextTest, memory) {
   auto writerRoot = memory::memoryManager()->addRootPool(
-      "memory", 1L << 30, exec::MemoryReclaimer::create());
+      "memory", 1LL << 30, exec::MemoryReclaimer::create());
   WriterContext context{std::make_shared<Config>(), writerRoot};
   ASSERT_EQ(context.getTotalMemoryUsage(), 0);
   context.initBuffer();
@@ -182,9 +182,9 @@ TEST_F(WriterContextTest, memory) {
   ASSERT_EQ(context.getTotalMemoryUsage(), 262208 + bufferSize * 3);
   ASSERT_EQ(context.availableMemoryReservation(), 2880448);
 
-  ASSERT_TRUE(generalPool.maybeReserve(4L << 20));
-  ASSERT_TRUE(dictPool.maybeReserve(4L << 20));
-  ASSERT_TRUE(outputPool.maybeReserve(4L << 20));
+  ASSERT_TRUE(generalPool.maybeReserve(4LL << 20));
+  ASSERT_TRUE(dictPool.maybeReserve(4LL << 20));
+  ASSERT_TRUE(outputPool.maybeReserve(4LL << 20));
   ASSERT_EQ(generalPool.usedBytes(), 262208 + bufferSize);
   ASSERT_EQ(generalPool.reservedBytes(), 9437184);
   ASSERT_EQ(dictPool.usedBytes(), bufferSize);
@@ -221,7 +221,7 @@ TEST_F(WriterContextTest, memory) {
 
 TEST_F(WriterContextTest, abort) {
   auto writerRoot = memory::memoryManager()->addRootPool(
-      "abort", 1L << 30, exec::MemoryReclaimer::create());
+      "abort", 1LL << 30, exec::MemoryReclaimer::create());
   WriterContext context{std::make_shared<Config>(), writerRoot};
   ASSERT_EQ(context.getTotalMemoryUsage(), 0);
   context.initBuffer();
@@ -249,9 +249,9 @@ TEST_F(WriterContextTest, abort) {
   ASSERT_EQ(context.getTotalMemoryUsage(), 262208 + bufferSize * 3);
   ASSERT_EQ(context.availableMemoryReservation(), 2880448);
 
-  ASSERT_TRUE(generalPool.maybeReserve(4L << 20));
-  ASSERT_TRUE(dictPool.maybeReserve(4L << 20));
-  ASSERT_TRUE(outputPool.maybeReserve(4L << 20));
+  ASSERT_TRUE(generalPool.maybeReserve(4LL << 20));
+  ASSERT_TRUE(dictPool.maybeReserve(4LL << 20));
+  ASSERT_TRUE(outputPool.maybeReserve(4LL << 20));
   ASSERT_EQ(generalPool.usedBytes(), 262208 + bufferSize);
   ASSERT_EQ(generalPool.reservedBytes(), 9437184);
   ASSERT_EQ(dictPool.usedBytes(), bufferSize);

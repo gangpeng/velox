@@ -17,7 +17,12 @@
 #include "velox/common/memory/MemoryPool.h"
 
 #include <signal.h>
-
+#ifdef _WIN32
+// Windows does not define SIGBUS; use SIGABRT to trigger a crash dump.
+#ifndef SIGBUS
+#define SIGBUS SIGABRT
+#endif
+#endif
 #include "velox/common/Casts.h"
 #include "velox/common/base/Counters.h"
 #include "velox/common/base/StatsReporter.h"
@@ -531,7 +536,7 @@ void* MemoryPoolImpl::allocate(
     handleAllocationFailure(
         fmt::format(
             "{} failed with {} from {} {}",
-            __FUNCTION__,
+            __func__,
             succinctBytes(size),
             toString(),
             allocator_->getAndClearFailureMessage()));
@@ -551,7 +556,7 @@ void* MemoryPoolImpl::allocateZeroFilled(int64_t numEntries, int64_t sizeEach) {
     handleAllocationFailure(
         fmt::format(
             "{} failed with {} entries and {} each from {} {}",
-            __FUNCTION__,
+            __func__,
             numEntries,
             succinctBytes(sizeEach),
             toString(),
@@ -572,7 +577,7 @@ void* MemoryPoolImpl::reallocate(void* p, int64_t size, int64_t newSize) {
     handleAllocationFailure(
         fmt::format(
             "{} failed with new {} and old {} from {} {}",
-            __FUNCTION__,
+            __func__,
             succinctBytes(newSize),
             succinctBytes(size),
             toString(),
@@ -644,7 +649,7 @@ void MemoryPoolImpl::allocateNonContiguous(
     handleAllocationFailure(
         fmt::format(
             "{} failed with {} pages from {} {}",
-            __FUNCTION__,
+            __func__,
             numPages,
             toString(),
             allocator_->getAndClearFailureMessage()));
@@ -697,7 +702,7 @@ void MemoryPoolImpl::allocateContiguous(
     handleAllocationFailure(
         fmt::format(
             "{} failed with {} pages from {} {}",
-            __FUNCTION__,
+            __func__,
             numPages,
             toString(),
             allocator_->getAndClearFailureMessage()));
@@ -731,7 +736,7 @@ void MemoryPoolImpl::growContiguous(
     handleAllocationFailure(
         fmt::format(
             "{} failed with {} pages from {} {}",
-            __FUNCTION__,
+            __func__,
             increment,
             toString(),
             allocator_->getAndClearFailureMessage()));

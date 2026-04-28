@@ -67,6 +67,9 @@ class AsyncSource {
         stateName(currentState));
   }
 
+  AsyncSource(const AsyncSource&) = delete;
+  AsyncSource& operator=(const AsyncSource&) = delete;
+
   /// Makes an item if it is not already made. To be called on a background
   /// executor.
   void prepare() {

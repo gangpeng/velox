@@ -15,11 +15,24 @@
  */
 #pragma once
 
+#ifdef _MSC_VER
+#define _USE_MATH_DEFINES
+#endif
 #include <cerrno>
 #include <charconv>
 #include <climits>
 #include <cmath>
 #include <cstdint>
+
+// On MSVC, M_PI and M_E are not defined by <cmath> unless _USE_MATH_DEFINES
+// was set before the first inclusion of <math.h>/<cmath>. Define them here
+// if not already defined so that subsequent uses in this header succeed.
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+#ifndef M_E
+#define M_E 2.71828182845904523536
+#endif
 #include <cstdlib>
 #include <functional>
 #include <limits>
@@ -36,10 +49,10 @@ namespace facebook::velox::functions {
 
 inline constexpr int kMinRadix = 2;
 inline constexpr int kMaxRadix = 36;
-inline constexpr long kLongMax = std::numeric_limits<int64_t>::max();
-inline constexpr long kLongMin = std::numeric_limits<int64_t>::min();
-inline constexpr long kIntegerMax = std::numeric_limits<int32_t>::max();
-inline constexpr long kIntegerMin = std::numeric_limits<int32_t>::min();
+inline constexpr int64_t kLongMax = std::numeric_limits<int64_t>::max();
+inline constexpr int64_t kLongMin = std::numeric_limits<int64_t>::min();
+inline constexpr int32_t kIntegerMax = std::numeric_limits<int32_t>::max();
+inline constexpr int32_t kIntegerMin = std::numeric_limits<int32_t>::min();
 
 inline constexpr char digits[36] = {
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b',
@@ -566,21 +579,21 @@ struct ToBaseFunction {
       B runningValue = value < 0 ? -1 * value : value;
       B remainder;
       char* resultPtr;
-      int128_t resultSize =
-          (int128_t)std::floor(std::log(runningValue) / std::log(radix)) + 1;
+      int64_t resultSize =
+          static_cast<int64_t>(std::floor(std::log(static_cast<double>(runningValue)) / std::log(static_cast<double>(radix)))) + 1;
       if (value < 0) {
         resultSize += 1;
-        result.resize(resultSize);
+        result.resize(static_cast<size_t>(resultSize));
         resultPtr = result.data();
         resultPtr[0] = '-';
       } else {
-        result.resize(resultSize);
+        result.resize(static_cast<size_t>(resultSize));
         resultPtr = result.data();
       }
       int64_t index = resultSize;
       while (runningValue > 0) {
         remainder = runningValue % radix;
-        resultPtr[--index] = digits[remainder];
+        resultPtr[--index] = digits[static_cast<int64_t>(remainder)];
         runningValue /= radix;
       }
     }

@@ -112,14 +112,14 @@ void TpchQueryBuilder::initialize(const std::string& dataPath) {
         continue;
       }
       // Ignore hidden files.
-      if (dirEntry.path().filename().c_str()[0] == '.') {
+      if (dirEntry.path().filename().string()[0] == '.') {
         continue;
       }
       if (tableMetadata_[tableName].dataFiles.empty()) {
         anyFound = true;
         readFileSchema(tableName, dirEntry.path().string(), columns);
       }
-      tableMetadata_[tableName].dataFiles.push_back(dirEntry.path());
+      tableMetadata_[tableName].dataFiles.push_back(dirEntry.path().string());
     }
     if (!anyFound && error) {
       std::ifstream file(tablePath);

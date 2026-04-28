@@ -6986,14 +6986,14 @@ TEST_P(HashJoinTest, reclaimFromJoinBuilderWithMultiDrivers) {
   const int numDrivers = 4;
 
   memory::MemoryManager::Options options;
-  options.allocatorCapacity = 8L << 30;
+  options.allocatorCapacity = 8LL << 30;
   auto memoryManagerWithoutArbitrator =
       std::make_unique<memory::MemoryManager>(options);
   const auto expectedResult =
       runHashJoinTask(
           vectors,
           newQueryCtx(
-              memoryManagerWithoutArbitrator.get(), executor_.get(), 8L << 30),
+              memoryManagerWithoutArbitrator.get(), executor_.get(), 8LL << 30),
           false,
           numDrivers,
           pool(),

@@ -352,6 +352,9 @@ TEST(DateTimeUtilTest, fromTimestampStringInvalid) {
 }
 
 TEST(DateTimeUtilTest, fromTimestampWithTimezoneString) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   // -1 means no timezone information.
   auto expected =
       (ParsedTimestampWithTimeZone{Timestamp(0, 0), nullptr, std::nullopt});
@@ -470,6 +473,9 @@ TEST(DateTimeUtilTest, fromTimestampWithTimezoneString) {
 }
 
 TEST(DateTimeUtilTest, fromParsedTimestampWithTimeZone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   // Based on the parsed timezone.
   auto input = ParsedTimestampWithTimeZone{
       Timestamp(0, 0), tz::locateZone("-06:00"), std::nullopt};
@@ -515,6 +521,9 @@ TEST(DateTimeUtilTest, fromParsedTimestampWithTimeZone) {
 }
 
 TEST(DateTimeUtilTest, toGMT) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   auto* laZone = tz::locateZone("America/Los_Angeles");
 
   // The GMT time when LA gets to "1970-01-01 00:00:00" (8h ahead).
@@ -566,6 +575,9 @@ TEST(DateTimeUtilTest, toGMT) {
 }
 
 TEST(DateTimeUtilTest, toTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   auto* laZone = tz::locateZone("America/Los_Angeles");
 
   // The LA time when GMT gets to "1970-01-01 00:00:00" (8h behind).
@@ -604,6 +616,9 @@ TEST(DateTimeUtilTest, toTimezone) {
 }
 
 TEST(DateTimeUtilTest, toGMTFromID) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   // The GMT time when LA gets to "1970-01-01 00:00:00" (8h ahead).
   auto ts = parseTimestamp("1970-01-01 00:00:00");
   ts.toGMT(*tz::locateZone("America/Los_Angeles"));
@@ -661,6 +676,9 @@ TEST(DateTimeUtilTest, toGMTFromID) {
 }
 
 TEST(DateTimeUtilTest, toTimezoneFromID) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   // The LA time when GMT gets to "1970-01-01 00:00:00" (8h behind).
   auto ts = parseTimestamp("1970-01-01 00:00:00");
   ts.toTimezone(*tz::locateZone("America/Los_Angeles"));

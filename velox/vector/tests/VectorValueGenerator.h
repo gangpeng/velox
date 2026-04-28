@@ -86,7 +86,7 @@ class VectorValueGenerator {
       auto value = useFullTypeRange ? getRand64(rng) : getRand32(rng);
       if (type->isShortDecimal()) {
         const auto& [precision, _] = getDecimalPrecisionScale(*type);
-        return value % DecimalUtil::kPowersOfTen[precision];
+        return static_cast<T>(value % DecimalUtil::kPowersOfTen[precision]);
       } else {
         return value;
       }

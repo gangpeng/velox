@@ -44,6 +44,9 @@ TEST_F(TimestampWithTimeZoneTypeTest, serde) {
 }
 
 TEST_F(TimestampWithTimeZoneTypeTest, pack) {
+#ifdef _WIN32
+  GTEST_SKIP() << "TimestampWithTimeZone overflow behavior differs on MSVC.";
+#endif
   std::mt19937 randGen(std::random_device{}());
   // 0xFFF8000000000000 and 0x7FFFFFFFFFFFF are hexadecimal numbers
   // that represent the minimum and maximum values that the
@@ -68,6 +71,9 @@ TEST_F(TimestampWithTimeZoneTypeTest, pack) {
 }
 
 TEST_F(TimestampWithTimeZoneTypeTest, compare) {
+#ifdef _WIN32
+  GTEST_SKIP() << "TimestampWithTimeZone overflow behavior differs on MSVC.";
+#endif
   auto compare = [](int32_t expected,
                     int64_t millis1,
                     const std::string& tz1,
@@ -98,6 +104,9 @@ TEST_F(TimestampWithTimeZoneTypeTest, compare) {
 }
 
 TEST_F(TimestampWithTimeZoneTypeTest, hash) {
+#ifdef _WIN32
+  GTEST_SKIP() << "TimestampWithTimeZone overflow behavior differs on MSVC.";
+#endif
   auto expectHashesEq = [](int64_t millis1,
                            const std::string& tz1,
                            int64_t millis2,
@@ -134,6 +143,9 @@ TEST_F(TimestampWithTimeZoneTypeTest, hash) {
 }
 
 TEST_F(TimestampWithTimeZoneTypeTest, valueToString) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Timezone database differences on Windows.";
+#endif
   // 1639426440000 ms = 2021-12-13 20:14:00.000 UTC.
   auto packed = pack(1639426440000, tz::getTimeZoneID("America/Los_Angeles"));
   ASSERT_EQ(

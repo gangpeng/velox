@@ -14,7 +14,40 @@
  * limitations under the License.
  */
 
+#ifdef _WIN32
+#include <windows.h>
+namespace {
+inline void* velox_dlopen(const char* path) {
+  return static_cast<void*>(LoadLibraryA(path));
+}
+inline void* velox_dlsym(void* handle, const char* symbol) {
+  return reinterpret_cast<void*>(
+      GetProcAddress(static_cast<HMODULE>(handle), symbol));
+}
+inline const char* velox_dlerror() {
+  static thread_local char buf[256];
+  DWORD err = GetLastError();
+  if (err == 0) {
+    return nullptr;
+  }
+  FormatMessageA(
+      FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+      nullptr,
+      err,
+      0,
+      buf,
+      sizeof(buf),
+      nullptr);
+  return buf;
+}
+} // namespace
+#define dlopen(path, flags) velox_dlopen(path)
+#define dlsym(handle, sym) velox_dlsym(handle, sym)
+#define dlerror() velox_dlerror()
+#define RTLD_NOW 0
+#else
 #include <dlfcn.h>
+#endif
 #include <iostream>
 #include "velox/common/base/Exceptions.h"
 

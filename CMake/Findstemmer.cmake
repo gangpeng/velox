@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_library(STEMMER_LIB libstemmer.a)
+# On Windows/MSVC, vcpkg installs the library as stemmer.lib (no lib prefix, no .a
+# suffix). On Linux/macOS the traditional name is libstemmer.a. Search for both.
+if(WIN32)
+  find_library(STEMMER_LIB NAMES stemmer libstemmer)
+else()
+  find_library(STEMMER_LIB NAMES libstemmer.a stemmer)
+endif()
 if("${STEMMER_LIB}" STREQUAL "STEMMER_LIB-NOTFOUND")
   set(stemmer_FOUND false)
   return()

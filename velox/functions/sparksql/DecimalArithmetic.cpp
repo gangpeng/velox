@@ -54,7 +54,7 @@ struct DecimalAddSubtractBase {
           a * velox::DecimalUtil::kPowersOfTen[aRescale_];
       const int128_t bRescaled =
           b * velox::DecimalUtil::kPowersOfTen[bRescale_];
-      r = TResult(aRescaled + bRescaled);
+      r = static_cast<TResult>(aRescaled + bRescaled);
     } else {
       const uint32_t minLeadingZeros =
           sparksql::DecimalUtil::minLeadingZeros<A, B>(
@@ -70,7 +70,7 @@ struct DecimalAddSubtractBase {
         int128_t aRescaled = a * velox::DecimalUtil::kPowersOfTen[aRescale_];
         int128_t bRescaled = b * velox::DecimalUtil::kPowersOfTen[bRescale_];
         r = reduceScale(
-            TResult(aRescaled + bRescaled),
+            static_cast<TResult>(aRescaled + bRescaled),
             std::max(aScale_, bScale_) - rScale_);
       } else {
         // The risk of overflow should be considered. Add whole and fraction
@@ -86,9 +86,9 @@ struct DecimalAddSubtractBase {
   // Returns the whole and fraction parts of a decimal value.
   template <typename T>
   static std::pair<T, T> getWholeAndFraction(T value, uint8_t scale) {
-    const auto scaleFactor = velox::DecimalUtil::kPowersOfTen[scale];
-    const T whole = value / scaleFactor;
-    return {whole, value - whole * scaleFactor};
+    const auto scaleFactor = static_cast<T>(velox::DecimalUtil::kPowersOfTen[scale]);
+    const T whole = static_cast<T>(value / scaleFactor);
+    return {whole, static_cast<T>(value - whole * scaleFactor)};
   }
 
   // Increases the scale of input value by 'delta'. Returns the input value if
@@ -106,7 +106,7 @@ struct DecimalAddSubtractBase {
   static T
   decimalAddResult(T whole, T fraction, uint8_t resultScale, bool& overflow) {
     T scaledWhole = sparksql::DecimalUtil::multiply<T>(
-        whole, velox::DecimalUtil::kPowersOfTen[resultScale], overflow);
+        whole, static_cast<T>(velox::DecimalUtil::kPowersOfTen[resultScale]), overflow);
     if (FOLLY_UNLIKELY(overflow)) {
       return 0;
     }
@@ -138,7 +138,7 @@ struct DecimalAddSubtractBase {
           "Scale factor should not exceed the maximum of int64_t.");
     }
     DecimalUtil::divideWithRoundUp<T, T, T>(
-        result, in, T(scaleFactor), 0, overflow);
+        result, in, static_cast<T>(scaleFactor), 0, overflow);
     VELOX_DCHECK(!overflow);
     return result;
   }
@@ -431,7 +431,7 @@ struct DecimalMultiplyFunction {
         if (UNLIKELY(totalLeadingZeros <= 128)) {
           // Needs int256.
           int256_t reslarge =
-              static_cast<int256_t>(a) * static_cast<int256_t>(b);
+              int128ToInt256(a) * int128ToInt256(b);
           reslarge = reduceScaleBy(reslarge, deltaScale_);
           out = DecimalUtil::convert<R>(reslarge, overflow);
         } else {
@@ -447,7 +447,7 @@ struct DecimalMultiplyFunction {
             DecimalUtil::divideWithRoundUp<R, R, R>(
                 out,
                 result,
-                R(velox::DecimalUtil::kPowersOfTen[deltaScale_]),
+                static_cast<R>(velox::DecimalUtil::kPowersOfTen[deltaScale_]),
                 0,
                 overflow);
             VELOX_DCHECK(!overflow);
@@ -491,6 +491,21 @@ struct DecimalMultiplyFunction {
   uint8_t rPrecision_;
   // The difference between result scale and the sum of aScale and bScale.
   int32_t deltaScale_;
+};
+
+// Decimal multiply function that returns error on overflow.
+template <typename TExec, bool allowPrecisionLoss>
+struct CheckedDecimalMultiplyFunction
+    : DecimalMultiplyFunction<TExec, allowPrecisionLoss> {
+  VELOX_DEFINE_FUNCTION_TYPES(TExec);
+
+  template <typename R, typename A, typename B>
+  Status call(R& out, const A& a, const B& b) {
+    bool valid = DecimalMultiplyFunction<TExec, allowPrecisionLoss>::
+        template call<R, A, B>(out, a, b);
+    VELOX_USER_RETURN(!valid, "Decimal overflow in multiply");
+    return Status::OK();
+  }
 };
 
 template <typename TExec, bool allowPrecisionLoss>
@@ -753,6 +768,14 @@ template <typename TExec>
 using CheckedSubtractFunctionDenyPrecisionLoss =
     CheckedDecimalSubtractFunction<TExec, false>;
 
+template <typename TExec>
+using CheckedMultiplyFunctionAllowPrecisionLoss =
+    CheckedDecimalMultiplyFunction<TExec, true>;
+
+template <typename TExec>
+using CheckedMultiplyFunctionDenyPrecisionLoss =
+    CheckedDecimalMultiplyFunction<TExec, false>;
+
 std::vector<exec::SignatureVariable> getDivideConstraintsDenyPrecisionLoss() {
   std::string wholeDigits = fmt::format(
       "min(38, {a_precision} - {a_scale} + {b_scale})",
@@ -882,6 +905,11 @@ void registerDecimalMultiply(const std::string& prefix) {
       prefix + "multiply", makeConstraints(rPrecision, rScale, true));
   registerDecimalBinary<MultiplyFunctionDenyPrecisionLoss>(
       prefix + "multiply" + kDenyPrecisionLoss,
+      makeConstraints(rPrecision, rScale, false));
+  registerDecimalBinary<CheckedMultiplyFunctionAllowPrecisionLoss>(
+      prefix + "checked_multiply", makeConstraints(rPrecision, rScale, true));
+  registerDecimalBinary<CheckedMultiplyFunctionDenyPrecisionLoss>(
+      prefix + "checked_multiply" + kDenyPrecisionLoss,
       makeConstraints(rPrecision, rScale, false));
 }
 

@@ -634,7 +634,7 @@ TEST_F(ArithmeticTest, isNanFloat) {
 
   EXPECT_EQ(false, isNan(0.0f));
   EXPECT_EQ(true, isNan(kNan));
-  EXPECT_EQ(true, isNan(0.0f / 0.0f));
+  EXPECT_EQ(true, isNan(std::numeric_limits<float>::quiet_NaN()));
   EXPECT_EQ(false, isNan(std::nullopt));
 }
 
@@ -645,7 +645,7 @@ TEST_F(ArithmeticTest, isNanDouble) {
 
   EXPECT_EQ(false, isNan(0.0));
   EXPECT_EQ(true, isNan(kNanDouble));
-  EXPECT_EQ(true, isNan(0.0 / 0.0));
+  EXPECT_EQ(true, isNan(std::numeric_limits<double>::quiet_NaN()));
   EXPECT_EQ(false, isNan(std::nullopt));
 }
 

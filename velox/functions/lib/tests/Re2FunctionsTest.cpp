@@ -17,7 +17,9 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#ifndef _WIN32
 #include <sys/mman.h>
+#endif
 #include <velox/type/Type.h>
 #include <functional>
 #include <optional>
@@ -571,6 +573,7 @@ TEST_F(Re2FunctionsTest, likeGenericWithLongPatterns) {
 // reclaimed. Uses mmap/munmap to simulate the production crash scenario where
 // memory-mapped pages backing pattern data are unmapped under memory pressure,
 // producing a SIGSEGV at a page-aligned address (as seen in T260427308).
+#ifndef _WIN32
 TEST_F(Re2FunctionsTest, likePatternCopyProtectsAgainstDanglingPointer) {
   // Use a pattern with only literal chars + trailing '%' to get kPrefix kind.
   // Avoid '_' which is a LIKE single-char wildcard.
@@ -618,6 +621,7 @@ TEST_F(Re2FunctionsTest, likePatternCopyProtectsAgainstDanglingPointer) {
       "");
 #endif
 }
+#endif // _WIN32
 
 TEST_F(Re2FunctionsTest, likeDeterminePatternKind) {
   auto testPattern =

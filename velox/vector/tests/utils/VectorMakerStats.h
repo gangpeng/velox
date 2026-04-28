@@ -23,8 +23,25 @@
 #include "velox/vector/SimpleVector.h"
 
 namespace facebook::velox::test {
+
+namespace detail {
+// Helper to detect if CppToType<T> has NativeType.
+template <typename T, typename = void>
+struct HasNativeType : std::false_type {};
 template <typename T>
+struct HasNativeType<T, std::void_t<typename CppToType<T>::NativeType>>
+    : std::true_type {};
+} // namespace detail
+
+template <typename T, typename Enable = void>
 struct EvalTypeHelper {
+  using Type = T;
+};
+
+template <typename T>
+struct EvalTypeHelper<
+    T,
+    std::enable_if_t<detail::HasNativeType<T>::value>> {
   using Type = typename CppToType<T>::NativeType;
 };
 

@@ -15,6 +15,7 @@
  */
 
 #include "velox/dwio/dwrf/reader/StripeStream.h"
+#include <numeric>
 #include "velox/common/base/tests/GTestUtils.h"
 #include "velox/dwio/common/Arena.h"
 #include "velox/dwio/common/encryption/TestProvider.h"

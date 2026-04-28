@@ -18,6 +18,26 @@
 
 #include <gtest/gtest.h>
 
+#ifdef _MSC_VER
+// On MSVC, int128_t is absl::int128, a class type that gtest's EXPECT_EQ
+// cannot print or compare directly (EqHelper::Compare fails with C2660).
+// Provide a PrintTo overload so gtest can format int128_t values, and
+// provide helper macros that fall back to EXPECT_TRUE for int128 comparisons.
+#include <ostream>
+#include <sstream>
+#include "velox/type/HugeInt.h"
+
+namespace testing {
+inline void PrintTo(const facebook::velox::int128_t& value, std::ostream* os) {
+  *os << std::to_string(value);
+}
+inline void PrintTo(const __uint128_t& value, std::ostream* os) {
+  *os << std::to_string(
+      static_cast<facebook::velox::int128_t>(value));
+}
+} // namespace testing
+#endif
+
 // gtest v1.10 deprecated *_TEST_CASE in favor of *_TEST_SUITE. These
 // macros are provided for portability between different gtest versions.
 #ifdef TYPED_TEST_SUITE

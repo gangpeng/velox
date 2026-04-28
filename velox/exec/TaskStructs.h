@@ -66,6 +66,12 @@ struct BarrierState {
   /// operator does that). After the last drier done its work, the promises are
   /// fulfilled and the non-last drivers can continue.
   std::vector<ContinuePromise> allPeersFinishedPromises;
+
+  BarrierState() = default;
+  BarrierState(BarrierState&&) = default;
+  BarrierState& operator=(BarrierState&&) = default;
+  BarrierState(const BarrierState&) = delete;
+  BarrierState& operator=(const BarrierState&) = delete;
 };
 
 using ConnectorSplitPreloadFunc =
@@ -181,7 +187,7 @@ struct SplitsState {
   bool noMoreSplits{false};
 
   /// Keep the max added split's sequence id to deduplicate incoming splits.
-  long maxSequenceId{std::numeric_limits<long>::min()};
+  int64_t maxSequenceId{std::numeric_limits<int64_t>::min()};
 
   /// Map split group id -> split store.
   std::unordered_map<uint32_t, std::unique_ptr<SplitsStore>> groupSplitsStores;
@@ -255,6 +261,12 @@ struct SplitGroupState {
     mergeJoinSources.clear();
     localExchanges.clear();
   }
+
+  SplitGroupState() = default;
+  SplitGroupState(SplitGroupState&&) = default;
+  SplitGroupState& operator=(SplitGroupState&&) = default;
+  SplitGroupState(const SplitGroupState&) = delete;
+  SplitGroupState& operator=(const SplitGroupState&) = delete;
 };
 
 } // namespace facebook::velox::exec

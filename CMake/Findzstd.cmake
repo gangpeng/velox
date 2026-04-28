@@ -35,7 +35,7 @@ find_package_handle_standard_args(zstd DEFAULT_MSG ZSTD_LIBRARY ZSTD_INCLUDE_DIR
 mark_as_advanced(ZSTD_LIBRARY ZSTD_INCLUDE_DIR)
 
 get_filename_component(libzstd_ext ${ZSTD_LIBRARY} EXT)
-if(libzstd_ext STREQUAL ".a")
+if(libzstd_ext STREQUAL ".a" OR libzstd_ext STREQUAL ".lib")
   set(libzstd_type STATIC)
 else()
   set(libzstd_type SHARED)

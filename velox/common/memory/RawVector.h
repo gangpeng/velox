@@ -20,6 +20,7 @@
 #include "velox/common/base/BitUtil.h"
 #include "velox/common/base/SimdUtil.h"
 #include "velox/common/memory/MemoryPool.h"
+#include "velox/common/memory/SystemMemory.h"
 
 #include <type_traits>
 
@@ -207,7 +208,8 @@ class raw_vector {
       buffer =
           reinterpret_cast<uint8_t*>(pool_->allocate(bytes, simd::kPadding));
     } else {
-      buffer = reinterpret_cast<uint8_t*>(aligned_alloc(simd::kPadding, bytes));
+      buffer = reinterpret_cast<uint8_t*>(
+          memory::systemAlignedAlloc(simd::kPadding, bytes));
     }
     // Clear the word below the pointer so that we do not get read of
     // uninitialized when reading a partial word that extends below
@@ -229,7 +231,7 @@ class raw_vector {
     if (pool_ != nullptr) {
       pool_->free(buffer, bufferSize(capacity_));
     } else {
-      ::free(buffer);
+      memory::systemAlignedFree(buffer);
     }
     data_ = nullptr;
   }
@@ -246,7 +248,7 @@ class raw_vector {
         if (pool_ != nullptr) {
           pool_->free(newBuffer, bufferSize(newCapacity));
         } else {
-          ::free(newBuffer);
+          memory::systemAlignedFree(newBuffer);
         }
         throw;
       }

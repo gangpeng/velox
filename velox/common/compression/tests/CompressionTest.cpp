@@ -70,7 +70,9 @@ std::vector<uint8_t> makeRandomData(size_t n) {
   size_t bytes = n == 0 ? 1 : n;
   std::vector<uint8_t> data(bytes);
   std::default_random_engine engine(42);
-  std::uniform_int_distribution<uint8_t> dist(0, 255);
+  // Use uint16_t because MSVC does not allow std::uniform_int_distribution
+  // with types smaller than short.
+  std::uniform_int_distribution<uint16_t> dist(0, 255);
   std::generate(data.begin(), data.end(), [&]() { return dist(engine); });
   data.resize(n);
   return data;

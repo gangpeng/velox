@@ -40,6 +40,17 @@ CONSTDATA auto max_day = date::December/31;
 
 CONSTCD14 const sys_seconds min_seconds = date::sys_days(min_year/min_day);
 
+#ifdef _MSC_VER
+// MSVC does not define GCC-style byte order macros; define equivalents.
+#  define __ORDER_LITTLE_ENDIAN__ 1234
+#  define __ORDER_BIG_ENDIAN__    4321
+#  if defined(_M_IX86) || defined(_M_X64) || defined(_M_ARM) || defined(_M_ARM64)
+#    define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
+#  else
+#    define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
+#  endif
+#endif
+
 enum class endian
 {
     native = __BYTE_ORDER__,

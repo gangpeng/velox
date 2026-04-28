@@ -25,6 +25,7 @@
 
 #include "velox/common/base/Exceptions.h"
 #include "velox/common/base/SuccinctPrinter.h"
+#include "velox/common/process/ProcessBase.h"
 
 #ifdef ENABLE_HW_TIMER
 #if !defined(__x86_64__)
@@ -401,10 +402,7 @@ uint64_t TimerTree::now() const {
 }
 
 uint64_t TimerTree::cpuNow() const {
-  struct timespec ts{};
-  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
-  return static_cast<uint64_t>(ts.tv_sec) * 1'000'000'000ULL +
-      static_cast<uint64_t>(ts.tv_nsec);
+  return process::threadCpuNanos();
 }
 
 TimerNode* TimerTree::getOrCreateNode(const std::string& path) {

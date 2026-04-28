@@ -443,9 +443,9 @@ void registerVeloxMetrics() {
   // at P50, P90, P99, and P100 percentiles.
   DEFINE_HISTOGRAM_METRIC(
       kMetricArbitratorGlobalArbitrationBytes,
-      512L << 20,
+      512LL << 20,
       0,
-      32L << 30,
+      32LL << 30,
       50,
       90,
       99,
@@ -498,9 +498,9 @@ void registerVeloxMetrics() {
   // P90, P99, and P100 percentiles.
   DEFINE_HISTOGRAM_METRIC(
       kMetricMemoryPoolInitialCapacityBytes,
-      8L << 20,
+      8LL << 20,
       0,
-      256L << 20,
+      256LL << 20,
       50,
       90,
       99,
@@ -617,7 +617,7 @@ void registerVeloxMetrics() {
   // buckets. It is configured to report the capacity at P50, P90, P99, and P100
   // percentiles.
   DEFINE_HISTOGRAM_METRIC(
-      kMetricExchangeDataSize, 1L << 20, 0, 128L << 20, 50, 90, 99, 100);
+      kMetricExchangeDataSize, 1LL << 20, 0, 128LL << 20, 50, 90, 99, 100);
 
   // The number of data size exchange requests.
   DEFINE_METRIC(kMetricExchangeDataSizeCount, facebook::velox::StatType::COUNT);
@@ -628,9 +628,9 @@ void registerVeloxMetrics() {
   // and P100 percentiles.
   DEFINE_HISTOGRAM_METRIC(
       kMetricIndexLookupResultRawBytes,
-      1L << 20,
+      1LL << 20,
       0,
-      128L << 20,
+      128LL << 20,
       50,
       90,
       99,
@@ -640,22 +640,22 @@ void registerVeloxMetrics() {
   // 128 buckets. It is configured to report the capacity at P50, P90, P99, and
   // P100 percentiles.
   DEFINE_HISTOGRAM_METRIC(
-      kMetricIndexLookupResultBytes, 1L << 20, 0, 128L << 20, 50, 90, 99, 100);
+      kMetricIndexLookupResultBytes, 1LL << 20, 0, 128LL << 20, 50, 90, 99, 100);
 
   // The time distribution of index lookup time in range of [0, 16s] with 512
   // buckets and reports P50, P90, P99, and P100.
   DEFINE_HISTOGRAM_METRIC(
-      kMetricIndexLookupTimeMs, 32, 0, 16L << 10, 50, 90, 99, 100);
+      kMetricIndexLookupTimeMs, 32, 0, 16LL << 10, 50, 90, 99, 100);
 
   // The time distribution of index lookup wait time in range of [0, 16s] with
   // 512 buckets and reports P50, P90, P99, and P100.
   DEFINE_HISTOGRAM_METRIC(
-      kMetricIndexLookupWaitTimeMs, 32, 0, 16L << 10, 50, 90, 99, 100);
+      kMetricIndexLookupWaitTimeMs, 32, 0, 16LL << 10, 50, 90, 99, 100);
 
   // The time distribution of index lookup operator blocked wait time in range
   // of [0, 16s] with 512 buckets and reports P50, P90, P99, and P100.
   DEFINE_HISTOGRAM_METRIC(
-      kMetricIndexLookupBlockedWaitTimeMs, 32, 0, 16L << 10, 50, 90, 99, 100);
+      kMetricIndexLookupBlockedWaitTimeMs, 32, 0, 16LL << 10, 50, 90, 99, 100);
 
   // The number of index lookup results with error.
   DEFINE_METRIC(

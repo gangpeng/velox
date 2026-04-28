@@ -64,13 +64,13 @@ class CastExprTest : public functions::test::CastBaseTest {
   void testDecimalToFloatCasts() {
     // short to short, scale up.
     auto shortFlat = makeNullableFlatVector<int64_t>(
-        {DecimalUtil::kShortDecimalMin,
-         DecimalUtil::kShortDecimalMin,
+        {static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
+         static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
          -3,
          0,
          55,
-         DecimalUtil::kShortDecimalMax,
-         DecimalUtil::kShortDecimalMax,
+         static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+         static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
          std::nullopt},
         DECIMAL(18, 18));
     testCast(
@@ -91,7 +91,7 @@ class CastExprTest : public functions::test::CastBaseTest {
 
     auto longFlat = makeNullableFlatVector<int128_t>(
         {DecimalUtil::kLongDecimalMin,
-         0,
+         int128_t(0),
          DecimalUtil::kLongDecimalMax,
          HugeInt::build(0xffff, 0xffffffffffffffff),
          std::nullopt},
@@ -162,7 +162,9 @@ class CastExprTest : public functions::test::CastBaseTest {
 
     testCast(
         makeNullableFlatVector<int128_t>(
-            {0, tooSmall, 0, tooBig, 0, std::nullopt, 0}, DECIMAL(19, 0)),
+            {int128_t(0), tooSmall, int128_t(0), tooBig, int128_t(0),
+             std::nullopt, int128_t(0)},
+            DECIMAL(19, 0)),
         makeNullableFlatVector<NativeType>(
             {0, std::nullopt, 0, std::nullopt, 0, std::nullopt, 0}),
         true);
@@ -200,17 +202,17 @@ class CastExprTest : public functions::test::CastBaseTest {
              72,
              std::nullopt}));
     auto longFlat = makeNullableFlatVector<int128_t>(
-        {-30'000'000'000,
-         -25'500'000'000,
-         -24'500'000'000,
-         -20'000'000'000,
-         -10'000'000'000,
-         0,
-         550'000'000'000,
-         554'900'000'000,
-         559'900'000'000,
-         690'000'000'000,
-         720'000'000'000,
+        {int128_t(-30'000'000'000),
+         int128_t(-25'500'000'000),
+         int128_t(-24'500'000'000),
+         int128_t(-20'000'000'000),
+         int128_t(-10'000'000'000),
+         int128_t(0),
+         int128_t(550'000'000'000),
+         int128_t(554'900'000'000),
+         int128_t(559'900'000'000),
+         int128_t(690'000'000'000),
+         int128_t(720'000'000'000),
          std::nullopt},
         DECIMAL(20, 10));
     testCast(
@@ -542,6 +544,9 @@ TEST_F(CastExprTest, realAndDoubleToString) {
 }
 
 TEST_F(CastExprTest, stringToTimestamp) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   std::vector<std::optional<std::string>> input{
       "1970-01-01",
       "1970-01-01 00:00 America/Sao_Paulo",
@@ -778,6 +783,9 @@ TEST_F(CastExprTest, stringToTimestamp) {
 }
 
 TEST_F(CastExprTest, timestampToString) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   setLegacyCast(false);
   testCast<Timestamp, std::string>(
       "string",
@@ -876,6 +884,9 @@ TEST_F(CastExprTest, dateToTimestamp) {
 }
 
 TEST_F(CastExprTest, timestampToDate) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   std::vector<std::optional<Timestamp>> inputTimestamps = {
       Timestamp(0, 0),
       Timestamp(946684800, 0),
@@ -934,6 +945,9 @@ TEST_F(CastExprTest, timestampInvalid) {
 }
 
 TEST_F(CastExprTest, timestampAdjustToTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   // Empty timezone is assumed to be GMT.
   testCast<std::string, Timestamp>(
       "timestamp", {"1970-01-01"}, {Timestamp(0, 0)});
@@ -1725,11 +1739,13 @@ TEST_F(CastExprTest, decimalToFloatNoPrecisionLoss) {
 
 TEST_F(CastExprTest, decimalToBool) {
   auto shortFlat = makeNullableFlatVector<int64_t>(
-      {DecimalUtil::kShortDecimalMin, 0, std::nullopt}, DECIMAL(18, 18));
+      {static_cast<int64_t>(DecimalUtil::kShortDecimalMin), 0, std::nullopt},
+      DECIMAL(18, 18));
   testCast(shortFlat, makeNullableFlatVector<bool>({1, 0, std::nullopt}));
 
   auto longFlat = makeNullableFlatVector<int128_t>(
-      {DecimalUtil::kLongDecimalMin, 0, std::nullopt}, DECIMAL(38, 5));
+      {DecimalUtil::kLongDecimalMin, int128_t(0), std::nullopt},
+      DECIMAL(38, 5));
   testCast(longFlat, makeNullableFlatVector<bool>({1, 0, std::nullopt}));
 }
 
@@ -1750,11 +1766,11 @@ TEST_F(CastExprTest, decimalToVarchar) {
   testCast(shortFlatForZero, makeNullableFlatVector<StringView>({"0"}));
 
   auto shortFlat = makeNullableFlatVector<int64_t>(
-      {DecimalUtil::kShortDecimalMin,
+      {static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
        -3,
        0,
        55,
-       DecimalUtil::kShortDecimalMax,
+       static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
        std::nullopt},
       DECIMAL(18, 18));
   testCast(
@@ -1769,7 +1785,7 @@ TEST_F(CastExprTest, decimalToVarchar) {
 
   auto longFlat = makeNullableFlatVector<int128_t>(
       {DecimalUtil::kLongDecimalMin,
-       0,
+       int128_t(0),
        DecimalUtil::kLongDecimalMax,
        HugeInt::build(0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull),
        HugeInt::build(0xffff, 0xffffffffffffffff),
@@ -1785,7 +1801,8 @@ TEST_F(CastExprTest, decimalToVarchar) {
            "12089258196146291747.06175",
            std::nullopt}));
 
-  auto longFlatForZero = makeNullableFlatVector<int128_t>({0}, DECIMAL(25, 0));
+  auto longFlatForZero =
+      makeNullableFlatVector<int128_t>({int128_t(0)}, DECIMAL(25, 0));
   testCast(longFlatForZero, makeNullableFlatVector<StringView>({"0"}));
 }
 
@@ -1846,7 +1863,8 @@ TEST_F(CastExprTest, decimalToDecimal) {
 
   // NULLs and overflow.
   longFlat = makeNullableFlatVector<int128_t>(
-      {-20'000, -1'000'000, 10'000, std::nullopt}, DECIMAL(20, 3));
+      {int128_t(-20'000), int128_t(-1'000'000), int128_t(10'000), std::nullopt},
+      DECIMAL(20, 3));
   auto expectedShort = makeNullableFlatVector<int64_t>(
       {-200'000, std::nullopt, 100'000, std::nullopt}, DECIMAL(6, 4));
 
@@ -1883,13 +1901,13 @@ TEST_F(CastExprTest, decimalToDecimal) {
       testCast(
           makeNullableFlatVector<int128_t>(
               {DecimalUtil::kLongDecimalMax}, DECIMAL(38, 0)),
-          makeNullableFlatVector<int128_t>({0}, DECIMAL(38, 1))),
+          makeNullableFlatVector<int128_t>({int128_t(0)}, DECIMAL(38, 1))),
       "Cannot cast DECIMAL '99999999999999999999999999999999999999' to DECIMAL(38, 1)");
   VELOX_ASSERT_THROW(
       testCast(
           makeNullableFlatVector<int128_t>(
               {DecimalUtil::kLongDecimalMin}, DECIMAL(38, 0)),
-          makeNullableFlatVector<int128_t>({0}, DECIMAL(38, 1))),
+          makeNullableFlatVector<int128_t>({int128_t(0)}, DECIMAL(38, 1))),
       "Cannot cast DECIMAL '-99999999999999999999999999999999999999' to DECIMAL(38, 1)");
 }
 
@@ -2049,9 +2067,9 @@ TEST_F(CastExprTest, varcharToDecimal) {
       makeFlatVector<int128_t>(
           {DecimalUtil::kLongDecimalMin,
            DecimalUtil::kLongDecimalMax,
-           2,
-           200,
-           10},
+           int128_t(2),
+           int128_t(200),
+           int128_t(10)},
           DECIMAL(38, 0)));
 
   const std::string fractionRoundDown = "0." + std::string(38, '9') + "2";
@@ -2275,8 +2293,8 @@ TEST_F(CastExprTest, doubleToDecimal) {
           {
               HugeInt::parse("-333303" + zeros(16)),
               HugeInt::parse("-222202" + zeros(16)),
-              -1'000'000'000'000'000'000,
-              0,
+              int128_t(-1'000'000'000'000'000'000),
+              int128_t(0),
               HugeInt::parse("100" + zeros(18)),
               HugeInt::parse("9999999" + zeros(16)),
               HugeInt::parse("1003" + zeros(16)),
@@ -2299,11 +2317,11 @@ TEST_F(CastExprTest, doubleToDecimal) {
            0.123456789123123,
            std::nullopt}),
       makeNullableFlatVector<int128_t>(
-          {134'567'890'000'000'000,
-           150'000'000'000,
-           1'000,
-           999'999'999'999'999'000,
-           123'456'789'123'123'000,
+          {int128_t(134'567'890'000'000'000),
+           int128_t(150'000'000'000),
+           int128_t(1'000),
+           int128_t(999'999'999'999'999'000),
+           int128_t(123'456'789'123'123'000),
            std::nullopt},
           DECIMAL(38, 18)));
 
@@ -2394,14 +2412,14 @@ TEST_F(CastExprTest, realToDecimal) {
       makeFlatVector<int128_t>(
           {HugeInt::parse("-333303" + zeros(16)),
            HugeInt::parse("-222202" + zeros(16)),
-           -1'000'000'000'000'000'000,
-           0,
+           int128_t(-1'000'000'000'000'000'000),
+           int128_t(0),
            HugeInt::parse("100" + zeros(18)),
            HugeInt::parse("999999" + zeros(17)),
            HugeInt::parse("1003" + zeros(16)),
            HugeInt::parse("1005" + zeros(16)),
            HugeInt::parse("995" + zeros(16)),
-           -2'123'450'000'000'000'000},
+           int128_t(-2'123'450'000'000'000'000)},
           DECIMAL(38, 18)));
   testCast(
       input,
@@ -2412,11 +2430,11 @@ TEST_F(CastExprTest, realToDecimal) {
       makeNullableFlatVector<float>(
           {0.134567, 0.000015, 0.000001, 0.999999, 0.123456, std::nullopt}),
       makeNullableFlatVector<int128_t>(
-          {134'567'000'000'000'000,
-           15'000'000'000'000,
-           1'000'000'000'000,
-           999'999'000'000'000'000,
-           123'456'000'000'000'000,
+          {int128_t(134'567'000'000'000'000),
+           int128_t(15'000'000'000'000),
+           int128_t(1'000'000'000'000),
+           int128_t(999'999'000'000'000'000),
+           int128_t(123'456'000'000'000'000),
            std::nullopt},
           DECIMAL(38, 18)));
 
@@ -2991,6 +3009,9 @@ TEST_F(CastExprTest, skipUnnecessaryChildrenOfComplexTypes) {
 }
 
 TEST_F(CastExprTest, timeToVarcharCast) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   {
     // Test casting TIME to VARCHAR
 
@@ -3283,6 +3304,9 @@ TEST_F(CastExprTest, timeToBigintCast) {
 }
 
 TEST_F(CastExprTest, varcharToTimeCast) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   // Set session time zone to UTC before running the tests
   setTimezone("UTC");
 
@@ -3576,6 +3600,9 @@ TEST_F(CastExprTest, varcharToTimeCast) {
 }
 
 TEST_F(CastExprTest, varcharToTimeDSTGapHandling) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   // Test DST gap handling for VARCHAR to TIME conversion during spring-forward
   // transition in America/Los_Angeles on March 10, 2024
   setSessionStartTimeAndTimeZone(

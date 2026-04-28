@@ -138,6 +138,20 @@ namespace detail {
 
 template <typename T, typename F>
 Expected<T> callFollyTo(const F& v) {
+#ifdef _MSC_VER
+  // folly::tryTo does not support absl::int128 (absl::lts_20230802::int128)
+  // as either the source or target type on MSVC because absl::int128 is not
+  // recognized as arithmetic by folly's type traits.
+  // Use explicit static_cast for these cases instead.
+  if constexpr (std::is_same_v<T, int128_t> && std::is_arithmetic_v<F>) {
+    // Converting arithmetic value to int128_t.
+    return static_cast<int128_t>(v);
+  } else if constexpr (
+      std::is_same_v<F, int128_t> && std::is_arithmetic_v<T>) {
+    // Converting int128_t to a standard arithmetic type (bool, integral, float).
+    return static_cast<T>(v);
+  } else {
+#endif
   const auto result = folly::tryTo<T>(v);
   if (result.hasError()) {
     if (threadSkipErrorDetails()) {
@@ -149,6 +163,9 @@ Expected<T> callFollyTo(const F& v) {
   }
 
   return result.value();
+#ifdef _MSC_VER
+  }
+#endif
 }
 
 } // namespace detail
@@ -339,8 +356,16 @@ struct Converter<
     if constexpr (TPolicy::truncate) {
       return convertStringToInt(v);
     } else {
+#ifdef _MSC_VER
+      if constexpr (std::is_same_v<T, int128_t>) {
+        return convertStringToInt(trimWhiteSpace(v.data(), v.size()));
+      } else {
+#endif
       auto trimmed = trimWhiteSpace(v.data(), v.size());
       return detail::callFollyTo<T>(trimmed);
+#ifdef _MSC_VER
+      }
+#endif
     }
   }
 
@@ -348,8 +373,16 @@ struct Converter<
     if constexpr (TPolicy::truncate) {
       return convertStringToInt(std::string_view(v));
     } else {
+#ifdef _MSC_VER
+      if constexpr (std::is_same_v<T, int128_t>) {
+        return convertStringToInt(trimWhiteSpace(v.data(), v.size()));
+      } else {
+#endif
       auto trimmed = trimWhiteSpace(v.data(), v.size());
       return detail::callFollyTo<T>(trimmed);
+#ifdef _MSC_VER
+      }
+#endif
     }
   }
 
@@ -357,13 +390,29 @@ struct Converter<
     if constexpr (TPolicy::truncate) {
       return convertStringToInt(v);
     } else {
+#ifdef _MSC_VER
+      if constexpr (std::is_same_v<T, int128_t>) {
+        return convertStringToInt(trimWhiteSpace(v.data(), v.length()));
+      } else {
+#endif
       auto trimmed = trimWhiteSpace(v.data(), v.length());
       return detail::callFollyTo<T>(trimmed);
+#ifdef _MSC_VER
+      }
+#endif
     }
   }
 
   static Expected<T> tryCast(const bool& v) {
+#ifdef _MSC_VER
+    if constexpr (std::is_same_v<T, int128_t>) {
+      return v ? int128_t(1) : int128_t(0);
+    } else {
+      return folly::to<T>(v);
+    }
+#else
     return folly::to<T>(v);
+#endif
   }
 
   struct LimitType {
@@ -614,7 +663,18 @@ struct Converter<TypeKind::VARCHAR, void, TPolicy> {
       return str;
     }
 
+#ifdef _MSC_VER
+    // On MSVC, folly::to<std::string> does not support absl::int128 because
+    // it lacks the necessary folly type-trait specializations. Use fmt instead,
+    // which has an explicit formatter for absl::int128 defined in HugeInt.h.
+    if constexpr (std::is_same_v<T, int128_t>) {
+      return fmt::to_string(val);
+    } else {
+      return folly::to<std::string>(val);
+    }
+#else
     return folly::to<std::string>(val);
+#endif
   }
 
   static Expected<std::string> tryCast(const Timestamp& val) {

@@ -17,8 +17,13 @@
 #include "velox/exec/tests/utils/PortUtil.h"
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+#ifndef _WIN32
 #include <netinet/in.h>
 #include <sys/socket.h>
+#else
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
 #include "velox/common/base/Exceptions.h"
 
 namespace facebook::velox::exec::test {

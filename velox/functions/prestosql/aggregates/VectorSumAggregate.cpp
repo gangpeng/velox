@@ -28,7 +28,7 @@ inline void addToSum(T& sum, T value) {
     sum += value;
   } else {
     T checkedSum;
-    auto overflow = __builtin_add_overflow(sum, value, &checkedSum);
+    auto overflow = __builtin_add_overflow(T(sum), T(value), &checkedSum);
 
     if (UNLIKELY(overflow)) {
       VELOX_ARITHMETIC_ERROR(

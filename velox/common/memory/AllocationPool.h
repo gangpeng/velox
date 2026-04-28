@@ -17,6 +17,8 @@
 
 #include "velox/common/memory/Memory.h"
 
+#include <algorithm>
+
 namespace facebook::velox::memory {
 /// A set of Allocations holding the fixed width payload ows. The Runs are
 /// filled to the end except for the last one. This is used for iterating over
@@ -67,7 +69,7 @@ class AllocationPool {
     if (largeAllocations_.empty()) {
       return freeAddressableBytes();
     }
-    return largeAllocations_.back().size() - currentOffset_;
+    return endOfReservedRun() - currentOffset_;
   }
 
   // Returns pointer to first unallocated byte in the current run.
@@ -113,14 +115,28 @@ class AllocationPool {
   static constexpr int64_t kMaxMmapBytes = 512 << 20; // 512 MB
 
   // Returns the offset from 'startOfRun_' after which the last large
-  // allocation must be grown. There are mapped addresses all the way
-  // to 'bytesInRun_' ut they are not marked used by the
-  // pool/allocator. So use growContiguous() to update this.
-  int64_t endOfReservedRun() {
+  // allocation must be grown. Large runs start at a huge-page-aligned subrange,
+  // but the underlying contiguous allocation can also be grown by extra backing
+  // pages to cover the alignment gap on reserve/commit based platforms. Keep
+  // those backing pages out of the logical free space returned to callers.
+  int64_t endOfReservedRun() const {
     if (largeAllocations_.empty()) {
       return bytesInRun_;
     }
-    return largeAllocations_.back().size();
+    return reservedBytesInRun_;
+  }
+
+  // Returns the writable offset from 'startOfRun_' based on the committed or
+  // otherwise physically available size of the underlying allocation.
+  int64_t endOfWritableRun() const {
+    if (largeAllocations_.empty()) {
+      return bytesInRun_;
+    }
+    const auto& allocation = largeAllocations_.back();
+    return std::clamp<int64_t>(
+        allocation.data<char>() + allocation.size() - startOfRun_,
+        0,
+        bytesInRun_);
   }
 
   // Returns the number of bytes between first unallocated and the end of the
@@ -147,6 +163,12 @@ class AllocationPool {
   // Total addressable bytes from 'startOfRun_'. Not all are necessarily
   // declared allocated in 'pool_'. See growLastAllocation().
   int64_t bytesInRun_{0};
+
+  // Logical bytes from 'startOfRun_' that have been declared allocated in the
+  // current run. For large runs this can be smaller than the underlying
+  // allocation size if extra backing was needed only to bridge the alignment
+  // gap before 'startOfRun_'.
+  int64_t reservedBytesInRun_{0};
 
   // Offset of first unused byte from 'startOfRun_'.
   int64_t currentOffset_ = 0;

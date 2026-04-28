@@ -18,7 +18,7 @@
 #include "velox/duckdb/conversion/DuckConversion.h"
 #include "velox/parse/DuckLogicalOperator.h"
 
-#include <duckdb.hpp> // @manual
+#include "velox/duckdb/conversion/DuckDBIncludes.h"
 #include <duckdb/main/connection.hpp> // @manual
 #include <duckdb/planner/expression/bound_aggregate_expression.hpp> // @manual
 #include <duckdb/planner/expression/bound_cast_expression.hpp> // @manual
@@ -153,7 +153,7 @@ PlanNodePtr toVeloxPlan(
   const auto& columnIds = logicalGet.column_ids;
   std::vector<std::string> names;
   std::vector<TypePtr> types;
-  constexpr uint64_t kNone = ~0UL;
+  constexpr uint64_t kNone = ~0ULL;
   for (auto i = 0; i < columnIds.size(); ++i) {
     if (columnIds[i] == kNone) {
       continue;

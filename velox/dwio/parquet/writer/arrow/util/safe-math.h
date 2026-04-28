@@ -515,6 +515,27 @@ PSNIP_SAFE_DEFINE_LARGER_UNSIGNED_OPS(Psnip_uint64_t, uint64)
 
 #endif /* !defined(PSNIP_SAFE_NO_PROMOTIONS) */
 
+/* On MSVC the PROMOTED macros generate type names like psnipSafe_charLarger
+ * (with underscore after "Safe"), but the typedefs above use psnipSafecharLarger
+ * (no underscore). To avoid the resulting compile errors, undefine the LARGER
+ * feature flags on MSVC so the portable SIGNED_ADD/SUB/MUL fallbacks are used. */
+#ifdef _MSC_VER
+#undef PSNIP_SAFE_HAVE_LARGER_CHAR
+#undef PSNIP_SAFE_HAVE_LARGER_SCHAR
+#undef PSNIP_SAFE_HAVE_LARGER_UCHAR
+#undef PSNIP_SAFE_HAVE_LARGER_SHORT
+#undef PSNIP_SAFE_HAVE_LARGER_SHRT
+#undef PSNIP_SAFE_HAVE_LARGER_USHRT
+#undef PSNIP_SAFE_HAVE_LARGER_USHORT
+#undef PSNIP_SAFE_HAVE_LARGER_INT
+#undef PSNIP_SAFE_HAVE_LARGER_UINT
+#undef PSNIP_SAFE_HAVE_LARGER_LONG
+#undef PSNIP_SAFE_HAVE_LARGER_ULONG
+#undef PSNIP_SAFE_HAVE_LARGER_LLONG
+#undef PSNIP_SAFE_HAVE_LARGER_ULLONG
+#undef PSNIP_SAFE_HAVE_LARGER_SIZE
+#endif /* _MSC_VER */
+
 #define PSNIP_SAFE_DEFINE_BUILTIN_BINARY_OP(T, name, opName)      \
   PSNIP_SAFE__FUNCTION psnipSafeBool psnipSafe_##name##_##opName( \
       T* res, T a, T b) {                                         \

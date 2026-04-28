@@ -14,8 +14,16 @@
 
 include(FindPackageHandleStandardArgs)
 
-find_library(ARROW_LIB libarrow.a)
-find_library(ARROW_TESTING_LIB libarrow_testing.a)
+# On Windows/MSVC, Arrow static libs are named arrow_static.lib / arrow_testing_static.lib
+# (Arrow's cmake adds "_static" suffix on MSVC).
+# On Linux/macOS, they are libarrow.a / libarrow_testing.a.
+if(WIN32)
+  find_library(ARROW_LIB NAMES arrow_static)
+  find_library(ARROW_TESTING_LIB NAMES arrow_testing_static)
+else()
+  find_library(ARROW_LIB NAMES libarrow.a)
+  find_library(ARROW_TESTING_LIB NAMES libarrow_testing.a)
+endif()
 find_path(ARROW_INCLUDE_PATH arrow/api.h)
 find_package(Thrift)
 

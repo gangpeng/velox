@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Spark query runner requires gRPC which is not available on Windows.
+if(MSVC)
+  return()
+endif()
+
 # Set up Spark connect.
 file(
   GLOB PROTO_FILES

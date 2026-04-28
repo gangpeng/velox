@@ -1063,6 +1063,9 @@ TEST_F(JodaDateTimeFormatterTest, parseTimezoneOffset) {
 }
 
 TEST_F(JodaDateTimeFormatterTest, parseTimezone) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   EXPECT_THROW(parseJoda("", "z"), VeloxUserError);
   EXPECT_THROW(parseJoda("ANY", "z"), VeloxUserError);
   EXPECT_THROW(parseJoda("GM", "z"), VeloxUserError);
@@ -1079,6 +1082,9 @@ TEST_F(JodaDateTimeFormatterTest, parseTimezone) {
 }
 
 TEST_F(JodaDateTimeFormatterTest, parseMixedYMDFormat) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Requires named timezone database (not available on Windows)";
+#endif
   // Common patterns found.
   EXPECT_EQ(
       fromTimestampString("2021-01-04 23:00:00"),

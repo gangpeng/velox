@@ -28,9 +28,9 @@ DEFINE_int64(
 DECLARE_int32(steps);
 DECLARE_int32(duration_sec);
 
-DEFINE_int64(allocator_capacity, 8L << 30, "Allocator capacity in bytes.");
+DEFINE_int64(allocator_capacity, 8LL << 30, "Allocator capacity in bytes.");
 
-DEFINE_int64(arbitrator_capacity, 6L << 30, "Arbitrator capacity in bytes.");
+DEFINE_int64(arbitrator_capacity, 6LL << 30, "Arbitrator capacity in bytes.");
 
 using namespace facebook::velox::exec;
 

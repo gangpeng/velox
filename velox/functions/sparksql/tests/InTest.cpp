@@ -213,22 +213,39 @@ TEST_F(InTest, shortDecimal) {
   EXPECT_EQ(in<int64_t>(3, {1, 2}, DECIMAL(17, 11)), false);
   EXPECT_EQ(
       in<int64_t>(
-          DecimalUtil::kShortDecimalMin,
-          {DecimalUtil::kShortDecimalMin, DecimalUtil::kShortDecimalMax},
+          static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
+          {static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMax)},
           DECIMAL(18, 9)),
       true);
   EXPECT_EQ(
       in<int64_t>(
-          DecimalUtil::kShortDecimalMax,
-          {DecimalUtil::kShortDecimalMin, DecimalUtil::kShortDecimalMax},
+          static_cast<int64_t>(DecimalUtil::kShortDecimalMax),
+          {static_cast<int64_t>(DecimalUtil::kShortDecimalMin),
+           static_cast<int64_t>(DecimalUtil::kShortDecimalMax)},
           DECIMAL(18, 9)),
       true);
 }
 
 TEST_F(InTest, longDecimal) {
-  EXPECT_EQ(in<int128_t>(1, {1, 2}, DECIMAL(21, 2)), true);
-  EXPECT_EQ(in<int128_t>(2, {1, 2}, DECIMAL(29, 10)), true);
-  EXPECT_EQ(in<int128_t>(3, {1, 2}, DECIMAL(35, 20)), false);
+  EXPECT_EQ(
+      in<int128_t>(
+          int128_t(1),
+          {int128_t(1), int128_t(2)},
+          DECIMAL(21, 2)),
+      true);
+  EXPECT_EQ(
+      in<int128_t>(
+          int128_t(2),
+          {int128_t(1), int128_t(2)},
+          DECIMAL(29, 10)),
+      true);
+  EXPECT_EQ(
+      in<int128_t>(
+          int128_t(3),
+          {int128_t(1), int128_t(2)},
+          DECIMAL(35, 20)),
+      false);
   EXPECT_EQ(
       in<int128_t>(
           DecimalUtil::kLongDecimalMin,

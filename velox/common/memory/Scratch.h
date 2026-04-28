@@ -159,8 +159,11 @@ class ScratchPtr {
   raw_vector<char> data_;
   T* ptr_{nullptr};
   int32_t size_{0};
-  T inline_[inlineSize];
-  char padding_[inlineSize == 0 ? 0 : simd::kPadding];
+  // MSVC does not allow zero-sized arrays. Use size 1 when inlineSize is 0;
+  // the inline_ array is only used when size <= inlineSize (i.e. never when
+  // inlineSize == 0), so this extra byte is harmless.
+  T inline_[inlineSize == 0 ? 1 : inlineSize];
+  char padding_[inlineSize == 0 ? 1 : simd::kPadding];
 };
 
 } // namespace facebook::velox

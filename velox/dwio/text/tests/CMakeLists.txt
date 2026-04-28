@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Text reader/writer tests depend on Linux-specific test data files and
+# timezone database behavior that are not available on Windows.
+if(MSVC)
+  return()
+endif()
+
 set(
   TEST_LINK_LIBS
   velox_dwio_common_test_utils

@@ -166,8 +166,14 @@ class ExprWrapper;
 template <typename T>
 inline ExprWrapper toExprWrapper(T value);
 
-// Specialization for long to avoid ambiguity.
+// Specialization for int64_t to avoid ambiguity.
+inline ExprWrapper toExprWrapper(int64_t value);
+
+// On platforms where long differs from int64_t (e.g. MSVC where long is 32-bit),
+// provide an additional overload so callers passing long still compile.
+#if !std::is_same_v<long, int64_t>
 inline ExprWrapper toExprWrapper(long value);
+#endif
 
 template <>
 inline ExprWrapper toExprWrapper<ExprWrapper>(ExprWrapper expr);
@@ -464,9 +470,15 @@ inline ExprWrapper toExprWrapper(T value) {
   return lit(value);
 }
 
+inline ExprWrapper toExprWrapper(int64_t value) {
+  return lit(value);
+}
+
+#if !std::is_same_v<long, int64_t>
 inline ExprWrapper toExprWrapper(long value) {
   return lit(static_cast<int64_t>(value));
 }
+#endif
 
 template <>
 inline ExprWrapper toExprWrapper<ExprWrapper>(ExprWrapper expr) {

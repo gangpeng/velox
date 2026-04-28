@@ -30,7 +30,7 @@
 #include "velox/exec/fuzzer/ReferenceQueryRunner.h"
 #include "velox/serializers/PrestoSerializer.h"
 
-DEFINE_int64(allocator_capacity, 32L << 30, "Allocator capacity in bytes.");
+DEFINE_int64(allocator_capacity, 32LL << 30, "Allocator capacity in bytes.");
 
 DECLARE_int64(arbitrator_capacity);
 

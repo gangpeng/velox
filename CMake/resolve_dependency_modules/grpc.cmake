@@ -51,6 +51,11 @@ set(gRPC_SSL_PROVIDER "package" CACHE STRING "Provider of ssl library")
 set(gRPC_PROTOBUF_PROVIDER "package" CACHE STRING "Provider of protobuf library")
 set(gRPC_INSTALL ON CACHE BOOL "Generate installation target")
 FetchContent_MakeAvailable(gRPC)
+# On MSVC, gRPC's upb utf8_range code includes <x86intrin.h> which doesn't
+# exist. Provide a shim directory that redirects to <intrin.h>.
+if(MSVC AND TARGET upb)
+  target_include_directories(upb PRIVATE "${CMAKE_SOURCE_DIR}/velox/common/base")
+endif()
 add_library(gRPC::grpc ALIAS grpc)
 add_library(gRPC::grpc++ ALIAS grpc++)
 add_executable(gRPC::grpc_cpp_plugin ALIAS grpc_cpp_plugin)

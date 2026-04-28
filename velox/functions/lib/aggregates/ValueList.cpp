@@ -52,7 +52,7 @@ void ValueList::writeLastNulls(HashStringAllocator* allocator) {
 
 void ValueList::appendNull(HashStringAllocator* allocator) {
   prepareAppend(allocator);
-  lastNulls_ |= 1UL << (size_ % 64);
+  lastNulls_ |= 1ULL << (size_ % 64);
   ++size_;
 }
 
@@ -117,7 +117,7 @@ bool ValueListReader::next(BaseVector& output, vector_size_t outputIndex) {
     nulls_ = nullsStream_.read<uint64_t>();
   }
 
-  if (nulls_ & (1UL << (pos_ % 64))) {
+  if (nulls_ & (1ULL << (pos_ % 64))) {
     output.setNull(outputIndex, true);
   } else {
     exec::ContainerRowSerde::deserialize(dataStream_, outputIndex, &output);

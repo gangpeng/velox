@@ -54,6 +54,10 @@ class SsdFileTest : public testing::Test {
   static constexpr int64_t kMB = 1 << 20;
 
   void SetUp() override {
+#ifdef _WIN32
+    GTEST_SKIP() << "SSD cache tests use Unix-specific paths and are not "
+                    "supported on Windows.";
+#endif
     filesystems::registerLocalFileSystem();
     registerFaultyFileSystem();
     memory::MemoryManager::testingSetInstance(memory::MemoryManager::Options{});

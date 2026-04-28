@@ -49,6 +49,15 @@ using namespace facebook::velox::common::testutil;
 using namespace facebook::velox::common::hll;
 
 namespace facebook::velox::tool::trace::test {
+namespace {
+
+std::string normalizePathSeparators(std::string path) {
+  std::replace(path.begin(), path.end(), '\\', '/');
+  return path;
+}
+
+} // namespace
+
 class TableWriterReplayerTest : public HiveConnectorTestBase {
  protected:
   static void SetUpTestCase() {
@@ -83,7 +92,8 @@ class TableWriterReplayerTest : public HiveConnectorTestBase {
     std::set<std::string> subdirectories;
     for (auto& path : fs::recursive_directory_iterator(directoryPath)) {
       if (path.is_regular_file()) {
-        subdirectories.emplace(path.path().parent_path().string());
+        subdirectories.emplace(
+            normalizePathSeparators(path.path().parent_path().string()));
       }
     }
     return subdirectories;
@@ -194,9 +204,8 @@ class TableWriterReplayerTest : public HiveConnectorTestBase {
 
     for (auto& path : fs::recursive_directory_iterator(directoryPath)) {
       if (path.is_regular_file()) {
-        splits.push_back(
-            HiveConnectorTestBase::makeHiveConnectorSplits(
-                path.path().string(), 1, fileFormat_)[0]);
+        splits.push_back(HiveConnectorTestBase::makeHiveConnectorSplits(
+            path.path().string(), 1, fileFormat_)[0]);
       }
     }
 
@@ -258,6 +267,11 @@ class TableWriterReplayerTest : public HiveConnectorTestBase {
 };
 
 TEST_F(TableWriterReplayerTest, runner) {
+  gflags::FlagSaver flagSaver;
+  // TraceReplayRunner prompts in CLI mode. The test populates all flags
+  // directly, so fast mode avoids waiting on stdin during test runs.
+  FLAGS_fast = true;
+
   vector_size_t size = 1'000;
   auto data = makeRowVector({
       makeFlatVector<int32_t>(size, [](auto row) { return row; }),
@@ -282,7 +296,7 @@ TEST_F(TableWriterReplayerTest, runner) {
       AssertQueryBuilder(plan)
           .config(core::QueryConfig::kQueryTraceEnabled, true)
           .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-          .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+          .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
           .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
           .config(core::QueryConfig::kQueryTraceNodeId, traceNodeId)
           .split(makeHiveConnectorSplit(sourceFilePath->getPath()))
@@ -355,7 +369,7 @@ TEST_F(TableWriterReplayerTest, basic) {
       AssertQueryBuilder(plan)
           .config(core::QueryConfig::kQueryTraceEnabled, true)
           .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-          .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+          .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
           .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
           .config(core::QueryConfig::kQueryTraceNodeId, planNodeId)
           .split(makeHiveConnectorSplit(sourceFilePath->getPath()))
@@ -387,9 +401,8 @@ TEST_F(TableWriterReplayerTest, basic) {
 
   const auto copy =
       AssertQueryBuilder(plan)
-          .split(makeHiveConnectorSplit(
-              fmt::format(
-                  "{}/{}", targetDirectoryPath->getPath(), writeFileName)))
+          .split(makeHiveConnectorSplit(fmt::format(
+              "{}/{}", targetDirectoryPath->getPath(), writeFileName)))
           .copyResults(pool());
   assertEqualResults({data}, {copy});
 }
@@ -453,8 +466,8 @@ TEST_F(TableWriterReplayerTest, partitionWrite) {
   for (auto i = 0; i < numPartitions; i++) {
     auto partitionName = fmt::format("p0={}/p1=str_{}", i, i);
     partitionNames.emplace(partitionName);
-    expectedPartitionDirectories.emplace(
-        fs::path(outputDirectory->getPath()) / partitionName);
+    expectedPartitionDirectories.emplace(normalizePathSeparators(
+        (fs::path(outputDirectory->getPath()) / partitionName).string()));
   }
   EXPECT_EQ(actualPartitionDirectories, expectedPartitionDirectories);
 
@@ -475,7 +488,7 @@ TEST_F(TableWriterReplayerTest, partitionWrite) {
   AssertQueryBuilder(planWithTracing)
       .config(core::QueryConfig::kQueryTraceEnabled, true)
       .config(core::QueryConfig::kQueryTraceDir, traceRoot)
-      .config(core::QueryConfig::kQueryTraceMaxBytes, 100UL << 30)
+      .config(core::QueryConfig::kQueryTraceMaxBytes, 100ULL << 30)
       .config(core::QueryConfig::kQueryTraceTaskRegExp, ".*")
       .config(core::QueryConfig::kQueryTraceNodeId, tableWriteNodeId)
       .splits(makeHiveConnectorSplits(inputFilePaths))

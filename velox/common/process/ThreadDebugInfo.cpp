@@ -19,6 +19,15 @@
 #include <folly/experimental/symbolizer/SignalHandler.h>
 #include <glog/logging.h>
 
+#ifndef _WIN32
+#include <unistd.h>
+#else
+#include <io.h>
+#define STDERR_FILENO 2
+// On Windows, use _write instead of POSIX write.
+#define write(fd, buf, count) _write((fd), (buf), static_cast<unsigned int>(count))
+#endif
+
 namespace facebook::velox::process {
 thread_local const ThreadDebugInfo* threadDebugInfo = nullptr;
 
